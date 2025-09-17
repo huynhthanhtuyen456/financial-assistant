@@ -208,4 +208,3 @@ cython_debug/
 *.json
 *.csv
 *.txt
-!*/requirements*.txt
