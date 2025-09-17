@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - 80:80
+
+  db:
+    ports:
+      - 5432:5432
+  
+  adminer:
+    ports:
+      - 8080:8080
+
+volumes:
+  db_data:
+  backend_data:
