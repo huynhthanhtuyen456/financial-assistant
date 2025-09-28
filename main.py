@@ -22,6 +22,7 @@ from routers import dividend_events
 from routers import scfa
 from routers import scta
 from routers import stock_price
+from routers import financial_analytics
 from scripts.refresh_materialized_view import refresh_materialized_view
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG if get_settings().debug_logs else logging.INFO)
@@ -61,7 +62,7 @@ app = FastAPI(
     lifespan=lifespan,
     title=get_settings().project_name,
     docs_url="/docs",
-    root_path="/api/v1",
+    root_path="/",
 )
 
 @app.exception_handler(RequestValidationError)
@@ -78,10 +79,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content=jsonable_encoder({"status": False, "errors": errors, "message": "Invalid Request"}),
     )
 
-app.include_router(stock_price.router)
-app.include_router(dividend_events.router)
-app.include_router(scfa.router)
-# app.include_router(scta.router)
+# Include routes
+API_V1 = "/api/v1"
+app.include_router(stock_price.router, prefix=API_V1)
+app.include_router(dividend_events.router, prefix=API_V1)
+app.include_router(scfa.router, prefix=API_V1)
+app.include_router(financial_analytics.router)
+# app.include_router(scta.router, prefix=API_V1)
 
 
 if get_settings().debug_logs:
