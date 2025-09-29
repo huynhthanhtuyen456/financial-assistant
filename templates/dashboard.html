@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Analytics Dashboard - {{ symbol }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+        }
+        .chart-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+        .chart-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .form-container {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Financial Analytics Dashboard</h1>
+            <p>Comprehensive financial analysis for {{ symbol }}</p>
+        </div>
+
+        <div class="form-container">
+            <form method="get">
+                <div class="form-group">
+                    <label for="symbol">Stock Symbol:</label>
+                    <input type="text" id="symbol" name="symbol" value="{{ symbol }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="yearly">Data Type:</label>
+                    <select id="yearly" name="yearly">
+                        <option value="true" {% if yearly %}selected{% endif %}>Yearly</option>
+                        <option value="false" {% if not yearly %}selected{% endif %}>Quarterly</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Update Analysis</button>
+            </form>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Total Assets (Latest)</h3>
+                <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['asset'].iloc[-1]) }} B VND</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Debt (Latest)</h3>
+                <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['debt'].iloc[-1]) }} B VND</div>
+            </div>
+            <div class="stat-card">
+                <h3>Equity (Latest)</h3>
+                <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['equity'].iloc[-1]) }} B VND</div>
+            </div>
+            <div class="stat-card">
+                <h3>Revenue (Latest)</h3>
+                <div class="stat-value">{{ "{:,.0f}".format(df_is_sorted['revenue'].iloc[-1]) }} B VND</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Asset, Debt, and Equity Trends</h2>
+            <img src="data:image/png;base64,{{ visualizations.get('asset_debt_equity', '') }}" alt="Asset, Debt, Equity Chart">
+        </div>
+
+        <div class="chart-container">
+            <h2>Debt Breakdown (Short vs Long Term)</h2>
+            <img src="data:image/png;base64,{{ visualizations.get('debt_breakdown', '') }}" alt="Debt Breakdown Chart">
+        </div>
+
+        <div class="chart-container">
+            <h2>Free Cash Flow Trend</h2>
+            <img src="data:image/png;base64,{{ visualizations.get('free_cashflow', '') }}" alt="Free Cash Flow Chart">
+        </div>
+
+        <div class="chart-container">
+            <h2>Revenue and Net Profit Trend</h2>
+            <img src="data:image/png;base64,{{ visualizations.get('revenue_profit', '') }}" alt="Revenue and Profit Chart">
+        </div>
+
+        <div class="chart-container">
+            <h2>Financial Metrics Correlation</h2>
+            <img src="data:image/png;base64,{{ visualizations.get('correlation_heatmap', '') }}" alt="Correlation Heatmap">
+        </div>
+
+        {% if r2_score is not none %}
+        <div class="chart-container">
+            <h2>Revenue Prediction Model (R² = {{ "%.3f"|format(r2_score) }})</h2>
+            <img src="data:image/png;base64,{{ visualizations.get('revenue_prediction', '') }}" alt="Revenue Prediction Chart">
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

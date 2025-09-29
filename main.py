@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
+from fastapi.staticfiles import StaticFiles
 
 from config import get_settings
 from core.models import HealthCheck
@@ -64,6 +65,7 @@ app = FastAPI(
     docs_url="/docs",
     root_path="/",
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

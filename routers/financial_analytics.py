@@ -1,19 +1,20 @@
-import io
 import base64
-import math
-from typing import List, Optional
-import requests
-import pandas as pd
+import io
+
 import matplotlib
+import pandas as pd
+import requests
+
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
 
 from db import session_manager
@@ -22,10 +23,12 @@ from models.cashflow import Cashflow
 from models.income_statement import IncomeStatement
 from models.financial_ratio import FinancialRatio
 
+
 router = APIRouter(
     prefix="/financial-analytics",
     tags=["financial-analytics"]
 )
+templates = Jinja2Templates(directory="templates")
 
 def create_base64_image(fig):
     """Convert matplotlib figure to base64 string"""
@@ -38,85 +41,74 @@ def create_base64_image(fig):
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def get_financial_dashboard(
+    request: Request,
     symbol: str = Query("FPT", description="Stock symbol to analyze"),
     yearly: bool = Query(True, description="Use yearly data"),
     session: AsyncSession = Depends(session_manager.session)
 ):
     """Get financial analytics dashboard HTML page"""
-    
+    symbol = symbol.upper()
     # Fetch data from database
     try:
         # Get balance sheet data
-        # stmt_bs = (select(BalanceSheet)
-        #           .where(BalanceSheet.symbol == symbol)
-        #           .where(BalanceSheet.yearly == yearly))
-        # queryset_bs = await session.execute(stmt_bs)
-        # balance_sheet = queryset_bs.fetchall()
-        balance_sheet = requests.get(f'https://app.finsc.vn/api/v1/scfa/balancesheet?symbols={symbol}&yearly={yearly}')
-        balance_sheet = balance_sheet.json()
-        df_balancesheet = pd.DataFrame(balance_sheet['data'])
+        stmt_bs = (select(BalanceSheet)
+                  .where(BalanceSheet.symbol == symbol)
+                  .where(BalanceSheet.yearly == yearly))
+        queryset_bs = await session.execute(stmt_bs)
+        balance_sheet = queryset_bs.fetchall()
         
         if not balance_sheet:
             raise HTTPException(status_code=404, detail=f"No data found for symbol {symbol}")
         
         # Extract data
-        # bs_data = []
-        # for row in balance_sheet:
-        #     item = row[0].__dict__
-        #     bs_data.extend(item["balance_sheet"])
+        bs_data = []
+        for row in balance_sheet:
+            item = row[0].__dict__
+            bs_data.extend(item["balance_sheet"])
         
-        # df_balancesheet = pd.DataFrame(bs_data)
+        df_balancesheet = pd.DataFrame(bs_data)
         
         # Get cashflow data
-        # stmt_cf = (select(Cashflow)
-        #           .where(Cashflow.symbol == symbol)
-        #           .where(Cashflow.yearly == yearly))
-        # queryset_cf = await session.execute(stmt_cf)
-        # cashflow = queryset_cf.fetchall()
-        cashflow = requests.get(f'https://app.finsc.vn/api/v1/scfa/cashflow?symbols={symbol}&yearly={yearly}')
-        cashflow = cashflow.json()
-        df_cashflow = pd.DataFrame(cashflow['data'])
+        stmt_cf = (select(Cashflow)
+                  .where(Cashflow.symbol == symbol)
+                  .where(Cashflow.yearly == yearly))
+        queryset_cf = await session.execute(stmt_cf)
+        cashflow = queryset_cf.fetchall()
         
-        # cf_data = []
-        # for row in cashflow:
-        #     item = row[0].__dict__
-        #     cf_data.extend(item["cashflow"])
+        cf_data = []
+        for row in cashflow:
+            item = row[0].__dict__
+            cf_data.extend(item["cashflow"])
         
-        # df_cashflow = pd.DataFrame(cf_data)
+        df_cashflow = pd.DataFrame(cf_data)
         
         # Get income statement data
-        # stmt_is = (select(IncomeStatement)
-        #           .where(IncomeStatement.symbol == symbol)
-        #           .where(IncomeStatement.yearly == yearly))
-        # queryset_is = await session.execute(stmt_is)
-        # income_statement = queryset_is.fetchall()
-        income_statement = requests.get(f'https://app.finsc.vn/api/v1/scfa/incomestatement?symbols={symbol}&yearly={yearly}')
-        income_statement = income_statement.json()
-        df_incomestatement = pd.DataFrame(income_statement['data'])
+        stmt_is = (select(IncomeStatement)
+                  .where(IncomeStatement.symbol == symbol)
+                  .where(IncomeStatement.yearly == yearly))
+        queryset_is = await session.execute(stmt_is)
+        income_statement = queryset_is.fetchall()
         
-        # is_data = []
-        # for row in income_statement:
-        #     item = row[0].__dict__
-        #     is_data.extend(item["income_statement"])
+        is_data = []
+        for row in income_statement:
+            item = row[0].__dict__
+            is_data.extend(item["income_statement"])
         
-        # df_incomestatement = pd.DataFrame(is_data)
+        df_incomestatement = pd.DataFrame(is_data)
         
         # Get financial ratio data
-        # stmt_fr = (select(FinancialRatio)
-        #           .where(FinancialRatio.symbol == symbol)
-        #           .where(FinancialRatio.yearly == yearly))
-        # queryset_fr = await session.execute(stmt_fr)
-        # financial_ratio = queryset_fr.fetchall()
-        financial_ratio = requests.get(f'https://app.finsc.vn/api/v1/scfa/financialratio?symbols={symbol}&yearly={yearly}')
-        financial_ratio = financial_ratio.json()
-        df_financialratio = pd.DataFrame(financial_ratio['data'])
+        stmt_fr = (select(FinancialRatio)
+                  .where(FinancialRatio.symbol == symbol)
+                  .where(FinancialRatio.yearly == yearly))
+        queryset_fr = await session.execute(stmt_fr)
+        financial_ratio = queryset_fr.fetchall()
         
-        # fr_data = []
-        # for row in financial_ratio:
-        #     item = row[0].__dict__
-        #     fr_data.extend(item["financial_ratio"])
+        fr_data = []
+        for row in financial_ratio:
+            item = row[0].__dict__
+            fr_data.extend(item["financial_ratio"])
         
-        # df_financialratio = pd.DataFrame(fr_data)
+        df_financialratio = pd.DataFrame(fr_data)
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching data: {str(e)}")
@@ -133,7 +125,7 @@ async def get_financial_dashboard(
         ax.plot(df_bs_sorted['year'], df_bs_sorted['equity'], label='Equity', marker='^')
         ax.set_xlabel('Year')
         ax.set_ylabel('Value (Billion VND)')
-        ax.set_title(f'{symbol} Balancesheet: Assets, Debt, and Equity Over Years')
+        ax.set_title(f'{symbol} Balance sheet: Assets, Debt, and Equity Over Years')
         ax.legend()
         ax.grid(True)
         visualizations['asset_debt_equity'] = create_base64_image(fig)
@@ -144,7 +136,7 @@ async def get_financial_dashboard(
         ax.plot(df_bs_sorted['year'], df_bs_sorted['shortDebt'], label='Short Debt', marker='s')
         ax.set_xlabel('Year')
         ax.set_ylabel('Value (Billion VND)')
-        ax.set_title(f'{symbol} Balancesheet: Short and Long Debt Over Years')
+        ax.set_title(f'{symbol} Balance sheet: Short and Long Debt Over Years')
         ax.legend()
         ax.grid(True)
         visualizations['debt_breakdown'] = create_base64_image(fig)
@@ -218,192 +210,26 @@ async def get_financial_dashboard(
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating visualizations: {str(e)}")
-    
-    # Generate HTML
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Financial Analytics Dashboard - {symbol}</title>
-        <style>
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                margin: 0;
-                padding: 20px;
-                background-color: #f5f5f5;
-            }}
-            .container {{
-                max-width: 1200px;
-                margin: 0 auto;
-                background-color: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }}
-            .header {{
-                text-align: center;
-                margin-bottom: 30px;
-                padding-bottom: 20px;
-                border-bottom: 2px solid #007bff;
-            }}
-            .header h1 {{
-                color: #007bff;
-                margin: 0;
-            }}
-            .chart-container {{
-                margin: 30px 0;
-                text-align: center;
-            }}
-            .chart-container h2 {{
-                color: #333;
-                margin-bottom: 20px;
-            }}
-            .chart-container img {{
-                max-width: 100%;
-                height: auto;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }}
-            .stats-container {{
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin: 30px 0;
-            }}
-            .stat-card {{
-                background-color: #f8f9fa;
-                padding: 20px;
-                border-radius: 8px;
-                border-left: 4px solid #007bff;
-            }}
-            .stat-card h3 {{
-                margin: 0 0 10px 0;
-                color: #333;
-            }}
-            .stat-value {{
-                font-size: 24px;
-                font-weight: bold;
-                color: #007bff;
-            }}
-            .form-container {{
-                background-color: #f8f9fa;
-                padding: 20px;
-                border-radius: 8px;
-                margin-bottom: 30px;
-            }}
-            .form-group {{
-                margin-bottom: 15px;
-            }}
-            .form-group label {{
-                display: block;
-                margin-bottom: 5px;
-                font-weight: bold;
-            }}
-            .form-group input, .form-group select {{
-                width: 100%;
-                padding: 8px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 14px;
-            }}
-            .btn {{
-                background-color: #007bff;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-            }}
-            .btn:hover {{
-                background-color: #0056b3;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>Financial Analytics Dashboard</h1>
-                <p>Comprehensive financial analysis for {symbol}</p>
-            </div>
-            
-            <div class="form-container">
-                <form method="get">
-                    <div class="form-group">
-                        <label for="symbol">Stock Symbol:</label>
-                        <input type="text" id="symbol" name="symbol" value="{symbol}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="yearly">Data Type:</label>
-                        <select id="yearly" name="yearly">
-                            <option value="true" {'selected' if yearly else ''}>Yearly</option>
-                            <option value="false" {'selected' if not yearly else ''}>Quarterly</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn">Update Analysis</button>
-                </form>
-            </div>
-            
-            <div class="stats-container">
-                <div class="stat-card">
-                    <h3>Total Assets (Latest)</h3>
-                    <div class="stat-value">{df_bs_sorted['asset'].iloc[-1]:,.0f} B VND</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Debt (Latest)</h3>
-                    <div class="stat-value">{df_bs_sorted['debt'].iloc[-1]:,.0f} B VND</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Equity (Latest)</h3>
-                    <div class="stat-value">{df_bs_sorted['equity'].iloc[-1]:,.0f} B VND</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Revenue (Latest)</h3>
-                    <div class="stat-value">{df_is_sorted['revenue'].iloc[-1]:,.0f} B VND</div>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <h2>Asset, Debt, and Equity Trends</h2>
-                <img src="data:image/png;base64,{visualizations.get('asset_debt_equity', '')}" alt="Asset, Debt, Equity Chart">
-            </div>
-            
-            <div class="chart-container">
-                <h2>Debt Breakdown (Short vs Long Term)</h2>
-                <img src="data:image/png;base64,{visualizations.get('debt_breakdown', '')}" alt="Debt Breakdown Chart">
-            </div>
-            
-            <div class="chart-container">
-                <h2>Free Cash Flow Trend</h2>
-                <img src="data:image/png;base64,{visualizations.get('free_cashflow', '')}" alt="Free Cash Flow Chart">
-            </div>
-            
-            <div class="chart-container">
-                <h2>Revenue and Net Profit Trend</h2>
-                <img src="data:image/png;base64,{visualizations.get('revenue_profit', '')}" alt="Revenue and Profit Chart">
-            </div>
-            
-            <div class="chart-container">
-                <h2>Financial Metrics Correlation</h2>
-                <img src="data:image/png;base64,{visualizations.get('correlation_heatmap', '')}" alt="Correlation Heatmap">
-            </div>
-            
-            {f'''
-            <div class="chart-container">
-                <h2>Revenue Prediction Model (R² = {r2_score:.3f})</h2>
-                <img src="data:image/png;base64,{visualizations.get('revenue_prediction', '')}" alt="Revenue Prediction Chart">
-            </div>
-            ''' if r2_score is not None else ''}
-            
-        </div>
-    </body>
-    </html>
-    """
 
-    return HTMLResponse(content=html_content)
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context = {
+            "symbol": symbol,
+            "yearly": yearly,  # or False, for data type selection
+            "df_bs_sorted": df_bs_sorted,  # Pandas DataFrame with 'asset', 'debt', 'equity' columns, sorted by date
+            "df_is_sorted": df_is_sorted,  # Pandas DataFrame with 'revenue' column, sorted by date
+            "visualizations": {
+                "asset_debt_equity": visualizations.get('asset_debt_equity', ''),
+                "debt_breakdown": visualizations.get('debt_breakdown', ''),
+                "free_cashflow": visualizations.get('free_cashflow', ''),
+                "revenue_profit": visualizations.get('revenue_profit', ''),
+                "correlation_heatmap": visualizations.get('correlation_heatmap', ''),
+                "revenue_prediction": visualizations.get('revenue_prediction', ''),
+            },
+            "r2_score": r2_score,  # or None if not available
+        }
+    )
 
 @router.get("/chart/balancesheet")
 async def get_balancesheet_chart(
