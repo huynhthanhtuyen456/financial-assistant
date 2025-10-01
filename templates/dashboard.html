@@ -98,6 +98,104 @@
         .btn:hover {
             background-color: #0056b3;
         }
+        .insights-container {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+            border-left: 4px solid #28a745;
+        }
+        .insights-container h2 {
+            color: #28a745;
+            margin-top: 0;
+        }
+        .insight-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            border-left: 3px solid #007bff;
+        }
+        .insight-section h3 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .metric-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .correlation-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .correlation-item:last-child {
+            border-bottom: none;
+        }
+        .correlation-name {
+            font-weight: bold;
+        }
+        .correlation-value {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .risk-item {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .growth-item {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .chart-analysis {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #17a2b8;
+            text-align: left;
+        }
+        .chart-analysis h4 {
+            color: #17a2b8;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .chart-analysis ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .chart-analysis li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .chart-analysis strong {
+            color: #495057;
+        }
     </style>
 </head>
 <body>
@@ -124,7 +222,166 @@
             </form>
         </div>
 
-        <div class="stats-container">
+        <!-- Financial Insights Section -->
+        <div class="insights-container">
+            <h2>📊 Financial Insights & Analysis</h2>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h3>Total Assets (Latest)</h3>
+                    <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['asset'].iloc[-1]) }} B VND</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Debt (Latest)</h3>
+                    <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['debt'].iloc[-1]) }} B VND</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Equity (Latest)</h3>
+                    <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['equity'].iloc[-1]) }} B VND</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Revenue (Latest)</h3>
+                    <div class="stat-value">{{ "{:,.0f}".format(df_is_sorted['revenue'].iloc[-1]) }} B VND</div>
+                </div>
+            </div>
+            <!-- Key Growth Metrics -->
+            <div class="insight-section">
+                <h3>🚀 Growth Performance (2002-2024)</h3>
+                <div class="metric-grid">
+                    <div class="metric-item">
+                        <div class="metric-value">
+                            {% if insights.asset_growth is not none %}
+                                {{ "{:,.0f}".format(insights.asset_growth) }}x
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="metric-label">Asset Growth</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">
+                            {% if insights.revenue_growth is not none %}
+                                {{ "{:,.0f}".format(insights.revenue_growth) }}x
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="metric-label">Revenue Growth</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">
+                            {% if insights.profit_growth is not none %}
+                                {{ "{:,.0f}".format(insights.profit_growth) }}x
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="metric-label">Profit Growth</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">
+                            {% if insights.profit_margin is not none %}
+                                {{ "{:.1f}%".format(insights.profit_margin) }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="metric-label">Current Profit Margin</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Health Indicators -->
+            <div class="insight-section">
+                <h3>💪 Financial Health Indicators</h3>
+                {% for indicator in insights.health_indicators %}
+                <div class="growth-item">
+                    <strong>✅ {{ indicator }}</strong>
+                </div>
+                {% endfor %}
+                {% if not insights.health_indicators %}
+                <div class="growth-item">
+                    <strong>ℹ️ No specific health indicators available for this symbol</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Key Correlations -->
+            <div class="insight-section">
+                <h3>🔗 Key Financial Correlations</h3>
+                <div class="correlation-item">
+                    <span class="correlation-name">Asset ↔ Debt</span>
+                    <span class="correlation-value">{{ "{:.3f}".format(insights.correlations.asset_debt) }}</span>
+                </div>
+                <div class="correlation-item">
+                    <span class="correlation-name">Asset ↔ Equity</span>
+                    <span class="correlation-value">{{ "{:.3f}".format(insights.correlations.asset_equity) }}</span>
+                </div>
+                <div class="correlation-item">
+                    <span class="correlation-name">Revenue ↔ Net Profit</span>
+                    <span class="correlation-value">{{ "{:.3f}".format(insights.correlations.revenue_profit) }}</span>
+                </div>
+                <div class="correlation-item">
+                    <span class="correlation-name">Free Cash Flow ↔ Revenue</span>
+                    <span class="correlation-value">{{ "{:.3f}".format(insights.correlations.fcf_revenue) }}</span>
+                </div>
+                <div class="correlation-item">
+                    <span class="correlation-name">ROE ↔ Revenue</span>
+                    <span class="correlation-value">{{ "{:.3f}".format(insights.correlations.roe_revenue) }}</span>
+                </div>
+            </div>
+
+            <!-- Risk Factors -->
+            <div class="insight-section">
+                <h3>⚠️ Risk Factors & Considerations</h3>
+                {% if insights.risk_factors %}
+                    {% for risk in insights.risk_factors %}
+                    <div class="risk-item">
+                        <strong>🔴 {{ risk }}</strong>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="risk-item">
+                        <strong>✅ No significant risk factors identified for this symbol</strong>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Investment Perspective -->
+            <div class="insight-section">
+                <h3>💰 Investment Perspective</h3>
+                {% for perspective in insights.investment_perspective %}
+                <div class="growth-item">
+                    <strong>📊 {{ perspective }}</strong>
+                </div>
+                {% endfor %}
+                {% if not insights.investment_perspective %}
+                <div class="growth-item">
+                    <strong>ℹ️ No specific investment perspective available for this symbol</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Top Revenue Correlators -->
+            <div class="insight-section">
+                <h3>🎯 Top Revenue Correlators (Model Features)</h3>
+                {% for name, value in insights.top_revenue_correlators.items() %}
+                <div class="correlation-item">
+                    <span class="correlation-name">{{ name }}</span>
+                    <span class="correlation-value">{{ "{:.3f}".format(value) }}</span>
+                </div>
+                {% endfor %}
+                {% if not insights.top_revenue_correlators %}
+                <div class="correlation-item">
+                    <span class="correlation-name">No correlation data available</span>
+                    <span class="correlation-value">N/A</span>
+                </div>
+                {% endif %}
+                </div>
+            </div>
+
+        <!-- </div> -->
+
+        <!-- <div class="stats-container">
             <div class="stat-card">
                 <h3>Total Assets (Latest)</h3>
                 <div class="stat-value">{{ "{:,.0f}".format(df_bs_sorted['asset'].iloc[-1]) }} B VND</div>
@@ -141,40 +398,93 @@
                 <h3>Revenue (Latest)</h3>
                 <div class="stat-value">{{ "{:,.0f}".format(df_is_sorted['revenue'].iloc[-1]) }} B VND</div>
             </div>
-        </div>
+        </div> -->
 
         <div class="chart-container">
             <h2>Asset, Debt, and Equity Trends</h2>
             <img src="data:image/png;base64,{{ visualizations.get('asset_debt_equity', '') }}" alt="Asset, Debt, Equity Chart">
+            <div class="chart-analysis">
+                <h4>📊 Chart Analysis:</h4>
+                <ul>
+                    <li><strong>Asset Growth:</strong> Shows the company's total asset value evolution over time, indicating business expansion and investment capacity</li>
+                    <li><strong>Debt Trend:</strong> Reveals the company's borrowing pattern and leverage strategy - increasing debt may indicate growth financing or financial stress</li>
+                    <li><strong>Equity Progression:</strong> Displays shareholder equity changes, reflecting retained earnings and capital structure health</li>
+                    <li><strong>Insight:</strong> A healthy company typically shows growing assets with manageable debt-to-equity ratios. Watch for diverging trends that might indicate financial stress or aggressive growth strategies</li>
+                </ul>
+            </div>
         </div>
 
         <div class="chart-container">
             <h2>Debt Breakdown (Short vs Long Term)</h2>
             <img src="data:image/png;base64,{{ visualizations.get('debt_breakdown', '') }}" alt="Debt Breakdown Chart">
+            <div class="chart-analysis">
+                <h4>📊 Chart Analysis:</h4>
+                <ul>
+                    <li><strong>Short-term Debt:</strong> Obligations due within one year - high levels may indicate liquidity pressure or working capital needs</li>
+                    <li><strong>Long-term Debt:</strong> Obligations due beyond one year - typically used for capital investments and business expansion</li>
+                    <li><strong>Debt Structure:</strong> The ratio between short and long-term debt reveals the company's debt management strategy and financial flexibility</li>
+                    <li><strong>Key Insight:</strong> A balanced debt structure with manageable short-term obligations indicates good financial health. Excessive short-term debt may signal cash flow problems, while too much long-term debt could limit future borrowing capacity</li>
+                </ul>
+            </div>
         </div>
 
         <div class="chart-container">
             <h2>Free Cash Flow Trend</h2>
             <img src="data:image/png;base64,{{ visualizations.get('free_cashflow', '') }}" alt="Free Cash Flow Chart">
+            <div class="chart-analysis">
+                <h4>📊 Chart Analysis:</h4>
+                <ul>
+                    <li><strong>Free Cash Flow Definition:</strong> Cash generated from operations minus capital expenditures - the "true" cash available for shareholders</li>
+                    <li><strong>Positive FCF:</strong> Indicates the company generates more cash than it spends on maintaining and growing the business</li>
+                    <li><strong>FCF Growth:</strong> Consistent positive and growing FCF suggests strong operational efficiency and sustainable business model</li>
+                    <li><strong>Insight:</strong> Free cash flow is crucial for dividend payments, debt reduction, and reinvestment. Volatile or negative FCF may indicate operational challenges or heavy investment phases. Companies with strong, consistent FCF are often more resilient during economic downturns</li>
+                </ul>
+            </div>
         </div>
 
         <div class="chart-container">
             <h2>Revenue and Net Profit Trend</h2>
             <img src="data:image/png;base64,{{ visualizations.get('revenue_profit', '') }}" alt="Revenue and Profit Chart">
+            <div class="chart-analysis">
+                <h4>📊 Chart Analysis:</h4>
+                <ul>
+                    <li><strong>Revenue Growth:</strong> Top-line growth indicates market demand, pricing power, and business expansion success</li>
+                    <li><strong>Net Profit Evolution:</strong> Bottom-line performance shows operational efficiency and cost management effectiveness</li>
+                    <li><strong>Profit Margin Trends:</strong> The gap between revenue and profit reveals margin expansion or contraction over time</li>
+                    <li><strong>Insight:</strong> Healthy companies show both revenue and profit growing together. Widening gaps may indicate cost inflation or competitive pressure, while narrowing gaps could suggest operational improvements or pricing power. Consistent profit growth often indicates sustainable competitive advantages</li>
+                </ul>
+            </div>
         </div>
 
         <div class="chart-container">
             <h2>Financial Metrics Correlation</h2>
             <img src="data:image/png;base64,{{ visualizations.get('correlation_heatmap', '') }}" alt="Correlation Heatmap">
+            <div class="chart-analysis">
+                <h4>📊 Chart Analysis:</h4>
+                <ul>
+                    <li><strong>Correlation Matrix:</strong> Shows the strength and direction of relationships between different financial metrics</li>
+                    <li><strong>Color Coding:</strong> Red indicates positive correlation, blue indicates negative correlation, with intensity showing strength (closer to ±1 = stronger relationship)</li>
+                    <li><strong>Key Relationships:</strong> Look for strong correlations between revenue and profit, assets and equity, or unexpected negative correlations</li>
+                    <li><strong>Key Insight:</strong> High correlations between assets, debt, and equity suggest synchronized growth. Strong revenue-profit correlation indicates operational efficiency. Unexpected correlations may reveal business model insights or potential risks. Use this to understand which metrics move together and identify leading indicators</li>
+                </ul>
+            </div>
         </div>
 
         {% if r2_score is not none %}
         <div class="chart-container">
             <h2>Revenue Prediction Model (R² = {{ "%.3f"|format(r2_score) }})</h2>
             <img src="data:image/png;base64,{{ visualizations.get('revenue_prediction', '') }}" alt="Revenue Prediction Chart">
+            <div class="chart-analysis">
+                <h4>📊 Chart Analysis:</h4>
+                <ul>
+                    <li><strong>R² Score ({{ "%.3f"|format(r2_score) }}):</strong> Indicates how well the model explains revenue variance (0-1 scale, higher is better)</li>
+                    <li><strong>Actual vs Predicted:</strong> Blue line shows historical revenue, red line shows model predictions</li>
+                    <li><strong>Model Performance:</strong> Closer alignment between actual and predicted values indicates better predictive accuracy</li>
+                    <li><strong>Key Insight:</strong> R² > 0.7 suggests strong predictive power, 0.5-0.7 indicates moderate accuracy, <0.5 suggests limited predictability. This model uses multiple financial metrics to forecast revenue, helping identify which factors most influence revenue generation and enabling better business planning and investment decisions</li>
+                </ul>
+            </div>
         </div>
         {% endif %}
-
     </div>
 </body>
 </html>

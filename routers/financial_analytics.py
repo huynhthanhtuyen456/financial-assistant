@@ -211,6 +211,159 @@ async def get_financial_dashboard(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating visualizations: {str(e)}")
 
+    # Calculate dynamic insights
+    insights = {}
+    
+    # try:
+    # 1. Growth calculations
+    if len(df_bs_sorted) > 0 and df_bs_sorted['asset'].iloc[0] > 0:
+        insights['asset_growth'] = (df_bs_sorted['asset'].iloc[-1] / df_bs_sorted['asset'].iloc[0]) - 1
+    else:
+        insights['asset_growth'] = 0.0
+
+    if len(df_is_sorted) > 0 and df_is_sorted['revenue'].iloc[0] > 0:
+        insights['revenue_growth'] = (df_is_sorted['revenue'].iloc[-1] / df_is_sorted['revenue'].iloc[0]) - 1
+    else:
+        insights['revenue_growth'] = 0.0
+
+    if len(df_is_sorted) > 0 and df_is_sorted['postTaxProfit'].iloc[0] > 0:
+        insights['profit_growth'] = (df_is_sorted['postTaxProfit'].iloc[-1] / df_is_sorted['postTaxProfit'].iloc[0]) - 1
+    else:
+        insights['profit_growth'] = 0.0
+
+    if len(df_is_sorted) > 0 and df_is_sorted['revenue'].iloc[-1] > 0:
+        insights['profit_margin'] = (df_is_sorted['postTaxProfit'].iloc[-1] / df_is_sorted['revenue'].iloc[-1]) * 100
+    else:
+        insights['profit_margin'] = 0.0
+
+    # 2. Correlation calculations
+    if len(df_merged) > 0:
+        corr_matrix = df_merged[['asset', 'debt', 'equity', 'freeCashFlow', 'revenue', 'postTaxProfit', 'roe', 'roa']].corr()
+        insights['correlations'] = {
+            'asset_debt': corr_matrix.loc['asset', 'debt'] if 'asset' in corr_matrix.index and 'debt' in corr_matrix.columns else 0,
+            'asset_equity': corr_matrix.loc['asset', 'equity'] if 'asset' in corr_matrix.index and 'equity' in corr_matrix.columns else 0,
+            'revenue_profit': corr_matrix.loc['revenue', 'postTaxProfit'] if 'revenue' in corr_matrix.index and 'postTaxProfit' in corr_matrix.columns else 0,
+            'fcf_revenue': corr_matrix.loc['freeCashFlow', 'revenue'] if 'freeCashFlow' in corr_matrix.index and 'revenue' in corr_matrix.columns else 0,
+            'roe_revenue': corr_matrix.loc['roe', 'revenue'] if 'roe' in corr_matrix.index and 'revenue' in corr_matrix.columns else 0,
+        }
+
+        # Top revenue correlators
+        if 'revenue' in corr_matrix.columns:
+            revenue_corr = corr_matrix['revenue'].drop('revenue').sort_values(ascending=False)
+            insights['top_revenue_correlators'] = revenue_corr.head(5).to_dict()
+        else:
+            insights['top_revenue_correlators'] = {}
+    else:
+        insights['correlations'] = {
+            'asset_debt': 0, 'asset_equity': 0, 'revenue_profit': 0,
+            'fcf_revenue': 0, 'roe_revenue': 0
+        }
+        insights['top_revenue_correlators'] = {}
+
+    # 3. Risk assessment
+    insights['risk_factors'] = []
+
+    # High correlation risks
+    if insights['correlations']['asset_debt'] > 0.9:
+        insights['risk_factors'].append(f"High correlation between assets and debt ({insights['correlations']['asset_debt']:.3f})")
+    if insights['correlations']['asset_equity'] > 0.9:
+        insights['risk_factors'].append(f"High correlation between assets and equity ({insights['correlations']['asset_equity']:.3f})")
+
+    # Profitability risks
+    if insights.get('profit_margin') is not None and insights.get('profit_margin', 0) < 5:
+        insights['risk_factors'].append(f"Low profit margin ({insights.get('profit_margin', 0):.1f}%)")
+    elif insights.get('profit_margin') is not None and insights.get('profit_margin', 0) > 20:
+        insights['risk_factors'].append(f"Very high profit margin - potential sustainability concern ({insights.get('profit_margin', 0):.1f}%)")
+
+    # Growth risks
+    if insights.get('revenue_growth') is not None and insights.get('revenue_growth', 0) < 0:
+        insights['risk_factors'].append(f"Negative revenue growth ({insights.get('revenue_growth', 0):.1%})")
+    elif insights.get('revenue_growth') is not None and insights.get('revenue_growth', 0) > 1:
+        insights['risk_factors'].append(f"Very high revenue growth - potential sustainability risk ({insights.get('revenue_growth', 0):.1%})")
+
+    # Asset growth risks
+    if insights.get('asset_growth') is not None and insights.get('asset_growth', 0) < 0:
+        insights['risk_factors'].append(f"Negative asset growth ({insights.get('asset_growth', 0):.1%})")
+
+    # Debt-related risks
+    if len(df_bs_sorted) > 0:
+        latest_debt = df_bs_sorted['debt'].iloc[-1]
+        latest_equity = df_bs_sorted['equity'].iloc[-1]
+        if latest_equity > 0:
+            debt_equity_ratio = latest_debt / latest_equity
+            if debt_equity_ratio > 2:
+                insights['risk_factors'].append(f"High debt-to-equity ratio ({debt_equity_ratio:.2f})")
+            elif debt_equity_ratio > 1:
+                insights['risk_factors'].append(f"Moderate debt-to-equity ratio ({debt_equity_ratio:.2f})")
+
+    # Cash flow risks
+    if len(df_cf_sorted) > 0:
+        latest_fcf = df_cf_sorted['freeCashFlow'].iloc[-1]
+        if pd.notna(latest_fcf) and latest_fcf < 0:
+            insights['risk_factors'].append(f"Negative free cash flow ({latest_fcf:,.0f} B VND)")
+
+    # Volatility risks (if we have enough data points)
+    if len(df_is_sorted) > 3:
+        revenue_values = df_is_sorted['revenue'].dropna()
+        if len(revenue_values) > 3:
+            revenue_std = revenue_values.std()
+            revenue_mean = revenue_values.mean()
+            if revenue_mean > 0:
+                cv = revenue_std / revenue_mean
+                if cv > 0.5:
+                    insights['risk_factors'].append(f"High revenue volatility (CV: {cv:.2f})")
+
+    # If no specific risks found, add general assessment
+    if not insights['risk_factors']:
+        insights['risk_factors'].append("No significant risk factors identified based on current data")
+
+    # Debug: Print risk factors for troubleshooting
+    print(f"Debug - Risk factors for {symbol}: {insights['risk_factors']}")
+
+    # 4. Health indicators
+    insights['health_indicators'] = []
+    if insights.get('profit_margin', 0) > 10:
+        insights['health_indicators'].append("Strong profit margin")
+    if insights.get('revenue_growth', 0) > 0.1:
+        insights['health_indicators'].append("Healthy revenue growth")
+    if insights['correlations']['revenue_profit'] > 0.8:
+        insights['health_indicators'].append("Strong revenue-profit correlation")
+    if insights.get('asset_growth', 0) > 0:
+        insights['health_indicators'].append("Positive asset growth")
+    if insights.get('profit_margin', 0) > 5 and insights.get('profit_margin', 0) <= 10:
+        insights['health_indicators'].append("Moderate profit margin")
+    if insights.get('revenue_growth', 0) > 0 and insights.get('revenue_growth', 0) <= 0.1:
+        insights['health_indicators'].append("Moderate revenue growth")
+    if insights['correlations']['fcf_revenue'] > 0.7:
+        insights['health_indicators'].append("Strong free cash flow-revenue correlation")
+    if len(df_cf_sorted) > 0:
+        latest_fcf = df_cf_sorted['freeCashFlow'].iloc[-1]
+        if pd.notna(latest_fcf) and latest_fcf > 0:
+            insights['health_indicators'].append("Positive free cash flow generation")
+
+    # 5. Investment perspective
+    insights['investment_perspective'] = []
+    if r2_score is not None and r2_score > 0.5:
+        insights['investment_perspective'].append(f"Revenue Predictability: Model can predict revenue with R² = {r2_score:.3f}")
+    else:
+        insights['investment_perspective'].append("Revenue Predictability: Limited predictive model accuracy")
+
+    if len(df_cf_sorted) > 0:
+        latest_fcf = df_cf_sorted['freeCashFlow'].iloc[-1]
+        if pd.notna(latest_fcf) and latest_fcf > 0:
+            insights['investment_perspective'].append("Growth Sustainability: Positive free cash flow with stable growth trend")
+        else:
+            insights['investment_perspective'].append("Growth Sustainability: Monitor cash flow generation")
+
+    if insights['correlations']['revenue_profit'] > 0.8:
+        insights['investment_perspective'].append("Operational Efficiency: Revenue and profit growing in sync")
+    else:
+        insights['investment_perspective'].append("Operational Efficiency: Monitor revenue-profit relationship")
+
+    if len(df_bs_sorted) > 0:
+        latest_assets = df_bs_sorted['asset'].iloc[-1]
+        insights['investment_perspective'].append(f"Scale Advantage: Company has achieved large scale with {latest_assets:,.0f}B VND in total assets")
+
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -228,6 +381,7 @@ async def get_financial_dashboard(
                 "revenue_prediction": visualizations.get('revenue_prediction', ''),
             },
             "r2_score": r2_score,  # or None if not available
+            "insights": insights,  # Dynamic insights data
         }
     )
 
@@ -468,3 +622,4 @@ async def get_correlation_chart(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating correlation chart: {str(e)}")
+
