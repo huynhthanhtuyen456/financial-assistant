@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def download_balancesheet_from_tcbs():
-    stocks = text("select symbol from stock where symbol is not null")
+    stocks = text("select symbol from stock where symbol is not null and is_listed = true")
     results = session.exec(stocks)
 
     for stock in results:
@@ -96,7 +96,7 @@ def download_balancesheet_from_tcbs():
 
 
 def download_cashflow_from_tcbs():
-    stocks = text("select symbol from stock where symbol is not null")
+    stocks = text("select symbol from stock where symbol is not null and is_listed = true")
     results = session.exec(stocks)
 
     for stock in results:
@@ -171,7 +171,7 @@ def download_cashflow_from_tcbs():
 
 
 def download_incomestatement_from_tcbs():
-    stocks = text("select symbol from stock where symbol is not null")
+    stocks = text("select symbol from stock where symbol is not null and is_listed = true")
     results = session.exec(stocks)
 
     for stock in results:
@@ -246,7 +246,7 @@ def download_incomestatement_from_tcbs():
 
 
 def download_financial_ratio_from_tcbs():
-    stocks = text("select symbol from stock where symbol is not null")
+    stocks = text("select symbol from stock where symbol is not null and is_listed = true")
     results = session.exec(stocks)
 
     for stock in results:

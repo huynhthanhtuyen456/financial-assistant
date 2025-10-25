@@ -54,6 +54,8 @@ class Stock(models.TimestampModel, table=True):
     eng_name: str = Field(index=True, nullable=False)
     vie_name: str = Field(index=True, nullable=False)
     symbol: str = Field(index=True, nullable=False, unique=True, max_length=30)
+    is_listed: bool = Field(nullable=False)
+    listed_date: date = Field(nullable=False)
 
     # logo: str = Field(nullable=False)
     # is_listed: bool = Field(nullable=False)

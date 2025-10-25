@@ -66,18 +66,6 @@ session_manager = DatabaseSessionManager(
 )
 
 
-postgresql_session_manager = DatabaseSessionManager(
-    get_settings().asyncpg_postgres_url,
-    {"echo": get_settings().echo_sql}
-)
-
-def get_session_manager(db_engine: str = "postgresql") -> DatabaseSessionManager:
-    if db_engine not in ["postgresql", "timescale"]:
-        raise Exception("DatabaseSessionManager is not initialized. "
-                        "Db_engine must be either 'postgresql' or 'timescale'")
-    return postgresql_session_manager if db_engine == "postgresql" else session_manager
-
-
 # Create a new client and connect to the server
 client = MongoClient(get_settings().mongodb_url, server_api=ServerApi('1'))
 # Send a ping to confirm a successful connection

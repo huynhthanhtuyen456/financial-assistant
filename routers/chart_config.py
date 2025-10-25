@@ -7,13 +7,12 @@ from pydantic import Json
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from db import get_session_manager
+from db import session_manager
 from models.chart_config import ChartConfig
 from models.study_template import StudyTemplate
 from schemas.chart_config import DeleteChartConfigResponseModel, DeleteStudyTemplateResponseModel
 
 
-session_manager = get_session_manager()
 router = APIRouter()
 
 

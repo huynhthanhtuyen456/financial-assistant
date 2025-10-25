@@ -7,7 +7,7 @@ services:
     ports:
       - 80:80
 
-  db:
+  timescale:
     ports:
       - 5432:5432
   
