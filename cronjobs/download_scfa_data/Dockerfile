@@ -23,6 +23,5 @@ ENV PYTHONPATH=/cron \
     DEBUG_LOGS=false \
     ECHO_SQL=true \
     VERSION=0.1 \
-    DESCRIPTION="FinSC API Trading"
 
 CMD ["python3.11", "cron_scfa_data.py"]
