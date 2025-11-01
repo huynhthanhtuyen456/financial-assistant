@@ -63,15 +63,28 @@ async def get_balance_sheet(
         item = row[0].__dict__
 
         for row in item["balance_sheet"]:
+            dict_key = row["year"]
+            if not yearly:
+                dict_key = f"{row['year']}-Q{row['quarter']}"
             for key in keys:
-                if row["year"] not in financial_data:
-                    financial_data[row["year"]] = {row["ticker"]: {}}
-                    financial_data[row["year"]][row["ticker"]] = {f"{key}": row[key] or 0}
+                if dict_key not in financial_data:
+                    if not yearly:
+                        financial_data[dict_key] = {row["ticker"]: {}}
+                        financial_data[dict_key][row["ticker"]] = {f"{key}": row[key] or 0}
+                    else:
+                        financial_data[row["year"]] = {row["ticker"]: {}}
+                        financial_data[row["year"]][row["ticker"]] = {f"{key}": row[key] or 0}
                 else:
-                    if key not in financial_data[row["year"]]:
-                        if row["ticker"] not in financial_data[row["year"]]:
-                            financial_data[row["year"]][row["ticker"]] = {}
-                        financial_data[row["year"]][row["ticker"]][key] = row[key] or 0
+                    if key not in financial_data[dict_key]:
+                        if row["ticker"] not in financial_data[dict_key]:
+                            if not yearly:
+                                financial_data[dict_key][row["ticker"]] = {}
+                            else:
+                                financial_data[row["year"]][row["ticker"]] = {}
+                        if not yearly:
+                            financial_data[dict_key][row["ticker"]][key] = row[key] or 0
+                        else:
+                            financial_data[row["year"]][row["ticker"]][key] = row[key] or 0
                 # financial_data[row["year"]][key].reverse()
     data = financial_data
     reversed_dict = {k: data[k] for k in sorted(data)}
