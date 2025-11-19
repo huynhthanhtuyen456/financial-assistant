@@ -124,6 +124,90 @@
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ quick_ratio_metrics_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ quick_ratio_metrics_text | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ rnn_quick_ratio_metrics_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ rnn_quick_ratio_annotation_text | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ debt_ratio_metrics_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ debt_ratio_metrics_text | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ rnn_debt_ratio_metrics_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ rnn_debt_ratio_annotation_text | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap 5 JS Bundle -->
