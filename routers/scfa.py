@@ -57,7 +57,8 @@ async def get_balance_sheet(
             "status": False
         }
 
-    keys = ['cash', 'asset', 'debt', 'equity', 'payable']
+    keys = ['cash', 'asset', 'debt', 'equity', 'payable', 'shortAsset',
+            'shortDebt', 'longAsset', 'longDebt', 'inventory', 'shortReceivable', 'otherDebt']
     financial_data = {}
     for row in balance_sheet:
         item = row[0].__dict__

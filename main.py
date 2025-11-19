@@ -18,12 +18,13 @@ from config import get_settings
 from core.models import HealthCheck
 from db import session_manager
 # Import routes
-# from routers import chart_config
-from routers import dividend_events
-from routers import scfa
-from routers import scta
-from routers import stock_price
-from routers import financial_analytics
+from routers import (
+    dividend_events,
+    scfa,
+    stock_price,
+    dashboard,
+    balancesheet,
+)
 from scripts.refresh_materialized_view import refresh_materialized_view
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG if get_settings().debug_logs else logging.INFO)
@@ -65,7 +66,7 @@ app = FastAPI(
     docs_url="/docs",
     root_path="/",
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -86,9 +87,11 @@ API_V1 = "/api/v1"
 app.include_router(stock_price.router, prefix=API_V1)
 app.include_router(dividend_events.router, prefix=API_V1)
 app.include_router(scfa.router, prefix=API_V1)
-app.include_router(financial_analytics.router)
-# app.include_router(scta.router, prefix=API_V1)
+app.include_router(balancesheet.router)
+app.include_router(dashboard.router)
 
+# Mount the static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if get_settings().debug_logs:
     origins = [

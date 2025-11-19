@@ -2,16 +2,14 @@ import base64
 import io
 
 import matplotlib
+import plotly.graph_objects as go
 import requests
+from tensorflow.python.keras.losses import mean_squared_error
 
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
-from fastapi import APIRouter, Depends, Query, HTTPException
-from fastapi import Request
-from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
@@ -19,7 +17,7 @@ from sklearn.model_selection import train_test_split
 from models.cashflow import Cashflow
 from models.income_statement import IncomeStatement
 from models.financial_ratio import FinancialRatio
-from fastapi import APIRouter, Query, Depends, Request, HTTPException
+from fastapi import APIRouter, Query, Depends, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -31,13 +29,12 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, GRU, LeakyReLU
 from tensorflow.keras.callbacks import EarlyStopping
-import plotly.graph_objects as go
 import os
 
 
 router = APIRouter(
-    prefix="/financial-analytics",
-    tags=["financial-analytics"]
+    prefix="/dashboard",
+    tags=["financial-dashboard"]
 )
 templates = Jinja2Templates(directory="templates")
 
@@ -50,7 +47,7 @@ def create_base64_image(fig):
     plt.close(fig)
     return img_base64
 
-@router.get("/dashboard", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def get_financial_dashboard(
     request: Request,
     symbol: str = Query("FPT", description="Stock symbol to analyze"),

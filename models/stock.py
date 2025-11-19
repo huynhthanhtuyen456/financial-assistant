@@ -1,55 +1,55 @@
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, TEXT, BigInteger
-from sqlalchemy.orm import Mapped, DeclarativeBase
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Column, BigInteger
+from sqlalchemy.orm import Mapped
+from sqlmodel import Field, Relationship
 
 from core import models
 
 
-class Industry(models.TimestampModel, table=True):
-    id: int = Field(primary_key=True)
-    name: str = Field(index=True, nullable=False)
-    child: int = Field(nullable=True, foreign_key="industry.id")
-    parent: Optional["Industry"] = Relationship(back_populates="children")
-    children: Mapped[list["Industry"]] = Relationship(
-        back_populates="parent", sa_relationship_kwargs={
-            "lazy": "joined", "join_depth": 2, "remote_side": "industry.id"
-        }
-    )
-    stocks: list["Stock"] = Relationship(back_populates="industry")
-
-
-class Sector(models.TimestampModel, table=True):
-    id: int = Field(primary_key=True)
-    name: str = Field(index=True, nullable=False)
-    industry_id: int = Field(foreign_key=f"{Industry.__tablename__}.id", nullable=False)
-    stocks: list["Stock"] = Relationship(back_populates="sector")
-
-
-class StockFloor(models.TimestampModel, table=True):
-    """The Floor includes HOSE, UPCOM, HNX where stock listed"""
-    id: int = Field(primary_key=True)
-    name: str = Field(index=True, nullable=False)
-    stocks: list["Stock"] = Relationship(back_populates="floor")
-
-
-class StockType(models.TimestampModel, table=True):
-    """Categorize the stock includes STOCK, ETF."""
-    id: int = Field(primary_key=True)
-    name: str = Field(index=True, nullable=False)
-    stocks: list["Stock"] = Relationship(back_populates="type")
-
-
-class StockGroup(models.TimestampModel, table=True):
-    id: int = Field(primary_key=True)
-    name: str = Field(index=True, nullable=False)
-    stocks: list["Stock"] = Relationship(back_populates="group")
+# class Industry(models.TimestampModel, table=True):
+#     id: int = Field(primary_key=True)
+#     name: str = Field(index=True, nullable=False)
+#     child: int = Field(nullable=True, foreign_key="industry.id")
+#     parent: Optional["Industry"] = Relationship(back_populates="children")
+#     children: Mapped[list["Industry"]] = Relationship(
+#         back_populates="parent", sa_relationship_kwargs={
+#             "lazy": "joined", "join_depth": 2, "remote_side": "industry.id"
+#         }
+#     )
+#     stocks: list["Stock"] = Relationship(back_populates="industry")
+#
+#
+# class Sector(models.TimestampModel, table=True):
+#     id: int = Field(primary_key=True)
+#     name: str = Field(index=True, nullable=False)
+#     industry_id: int = Field(foreign_key=f"{Industry.__tablename__}.id", nullable=False)
+#     stocks: list["Stock"] = Relationship(back_populates="sector")
+#
+#
+# class StockFloor(models.TimestampModel, table=True):
+#     """The Floor includes HOSE, UPCOM, HNX where stock listed"""
+#     id: int = Field(primary_key=True)
+#     name: str = Field(index=True, nullable=False)
+#     stocks: list["Stock"] = Relationship(back_populates="floor")
+#
+#
+# class StockType(models.TimestampModel, table=True):
+#     """Categorize the stock includes STOCK, ETF."""
+#     id: int = Field(primary_key=True)
+#     name: str = Field(index=True, nullable=False)
+#     stocks: list["Stock"] = Relationship(back_populates="type")
+#
+#
+# class StockGroup(models.TimestampModel, table=True):
+#     id: int = Field(primary_key=True)
+#     name: str = Field(index=True, nullable=False)
+#     stocks: list["Stock"] = Relationship(back_populates="group")
 
 
 class Stock(models.TimestampModel, table=True):
-    id: int = Field(primary_key=True)
+    id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     name: str = Field(index=True, nullable=False)
     eng_name: str = Field(index=True, nullable=False)
     vie_name: str = Field(index=True, nullable=False)
