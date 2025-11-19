@@ -41,7 +41,7 @@ async def get_balance_sheet(session: AsyncSession, symbol: str, year: int, yearl
     queryset_bs = await session.execute(stmt_bs)
     balance_sheet_data = queryset_bs.fetchall()
 
-    if not balance_sheet:
+    if not balance_sheet_data:
         raise HTTPException(status_code=404)
 
     # Extract data

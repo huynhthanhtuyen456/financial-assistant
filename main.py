@@ -24,6 +24,8 @@ from routers import (
     stock_price,
     dashboard,
     balancesheet,
+    income_statement,
+    cashflow
 )
 from scripts.refresh_materialized_view import refresh_materialized_view
 
@@ -88,6 +90,8 @@ app.include_router(stock_price.router, prefix=API_V1)
 app.include_router(dividend_events.router, prefix=API_V1)
 app.include_router(scfa.router, prefix=API_V1)
 app.include_router(balancesheet.router)
+app.include_router(income_statement.router)
+app.include_router(cashflow.router)
 app.include_router(dashboard.router)
 
 # Mount the static files directory
