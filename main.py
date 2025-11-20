@@ -22,10 +22,10 @@ from routers import (
     dividend_events,
     scfa,
     stock_price,
-    dashboard,
     balancesheet,
     income_statement,
-    cashflow
+    cashflow,
+    overall_dashboard
 )
 from scripts.refresh_materialized_view import refresh_materialized_view
 
@@ -92,7 +92,7 @@ app.include_router(scfa.router, prefix=API_V1)
 app.include_router(balancesheet.router)
 app.include_router(income_statement.router)
 app.include_router(cashflow.router)
-app.include_router(dashboard.router)
+app.include_router(overall_dashboard.router)
 
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")

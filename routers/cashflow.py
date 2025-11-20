@@ -218,7 +218,10 @@ async def cashflow_dashboard(
     correlation_metrics_html = fig.to_html(full_html=False)
 
     # Build annotation
-    fcfe_metrics_text = f"<b>{prediction_year} Current FCFE for {symbol}</b><br>"
+    # FCFE (Free Cash Flow to Equity) annotation explanation
+    fcfe_metrics_text = f"<b>About Free Cash Flow to Equity (FCFE)</b><br>"
+    fcfe_metrics_text += f"Free cash flow to equity is a crucial financial metric that reveals the cash available to a company's equity shareholders after accounting for expenses, reinvestments, and debt repayments. FCFE serves as a vital indicator of a company's ability to self-fund dividends and share repurchases without relying on external financing. For investors, a high FCFE suggests sound financial health and efficient equity capital utilization, offering valuable insights for evaluating companies, especially those not issuing dividends.<br><br>"
+    fcfe_metrics_text += f"<b>{prediction_year} Current FCFE for {symbol}</b><br>"
     fcfe_metrics_text += f"<b>Predicted FCFE</b>: {predicted_fcfe:.2f}<br><br>"
     fcfe_metrics_text += f"<b>Predicted Components:</b><br>"
     fcfe_metrics_text += f"• Predicted Cash From Sale: {predicted_from_sale:,.2f}B VND<br>"
@@ -238,24 +241,55 @@ async def cashflow_dashboard(
         fcfe_metrics_text += f"• Actual {prediction_year}: {actual_fcfe:.2f}<br>"
         fcfe_metrics_text += f"• Difference: {difference:.2f} ({percentage_diff:+.2f}%)<br><br>"
 
-    # Add liquidity assessment
-    fcfe_metrics_text += f"<b>Predicted Liquidity Assessment:</b><br>"
-    if predicted_fcfe >= 2.0:
-        fcfe_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
-        fcfe_metrics_text += f"• Company has strong ability to cover short-term obligations<br>"
-        fcfe_metrics_text += f"• Current assets are {predicted_fcfe:.2f}x current liabilities<br>"
-    elif predicted_fcfe >= 1.5:
-        fcfe_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
-        fcfe_metrics_text += f"• Company can comfortably meet short-term obligations<br>"
-        fcfe_metrics_text += f"• Healthy liquidity position maintained<br>"
-    elif predicted_fcfe >= 1.0:
-        fcfe_metrics_text += f"• Expected Status: <b style='color:orange'>Adequate</b><br>"
-        fcfe_metrics_text += f"• Company can meet obligations but with limited buffer<br>"
-        fcfe_metrics_text += f"• Monitor closely for liquidity issues<br>"
+    # Add FCFE assessment based on historical data and predicted value
+    historical_fcfe = df_symbol['fcfe'].values
+    historical_fcfe_positive = historical_fcfe[historical_fcfe > 0]
+    
+    if len(historical_fcfe_positive) > 0:
+        avg_historical_fcfe = np.mean(historical_fcfe_positive)
+        median_historical_fcfe = np.median(historical_fcfe_positive)
     else:
-        fcfe_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
-        fcfe_metrics_text += f"• Current assets insufficient to cover current liabilities<br>"
-        fcfe_metrics_text += f"• Potential liquidity concerns - ratio below 1.0<br>"
+        avg_historical_fcfe = 0
+        median_historical_fcfe = 0
+    
+    fcfe_metrics_text += f"<b>FCFE Financial Health Assessment:</b><br>"
+    
+    # Assess based on positive/negative and comparison with historical data
+    if predicted_fcfe > 0:
+        if len(historical_fcfe_positive) > 0:
+            if predicted_fcfe >= avg_historical_fcfe * 1.2:
+                fcfe_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+                fcfe_metrics_text += f"• Predicted FCFE ({predicted_fcfe:,.2f}B VND) significantly exceeds historical average ({avg_historical_fcfe:,.2f}B VND)<br>"
+                fcfe_metrics_text += f"• Strong ability to self-fund dividends and share repurchases<br>"
+                fcfe_metrics_text += f"• Company demonstrates robust cash generation for equity holders<br>"
+            elif predicted_fcfe >= avg_historical_fcfe * 0.8:
+                fcfe_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+                fcfe_metrics_text += f"• Predicted FCFE ({predicted_fcfe:,.2f}B VND) aligns with historical performance ({avg_historical_fcfe:,.2f}B VND)<br>"
+                fcfe_metrics_text += f"• Company can comfortably fund shareholder returns without external financing<br>"
+                fcfe_metrics_text += f"• Healthy cash flow generation for equity stakeholders<br>"
+            else:
+                fcfe_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+                fcfe_metrics_text += f"• Predicted FCFE ({predicted_fcfe:,.2f}B VND) is below historical average ({avg_historical_fcfe:,.2f}B VND)<br>"
+                fcfe_metrics_text += f"• Company can still fund dividends but with reduced capacity<br>"
+                fcfe_metrics_text += f"• Monitor cash flow trends and capital allocation decisions<br>"
+        else:
+            # No historical positive FCFE data, but current is positive
+            fcfe_metrics_text += f"• Expected Status: <b style='color:blue'>Positive Turnaround</b><br>"
+            fcfe_metrics_text += f"• Predicted FCFE ({predicted_fcfe:,.2f}B VND) is positive, indicating improved cash generation<br>"
+            fcfe_metrics_text += f"• Company shows potential to generate cash for equity holders<br>"
+            fcfe_metrics_text += f"• Monitor sustainability of positive cash flow trend<br>"
+    else:
+        # Negative FCFE
+        if len(historical_fcfe_positive) > 0:
+            fcfe_metrics_text += f"• Expected Status: <b style='color:red'>Concerning</b><br>"
+            fcfe_metrics_text += f"• Predicted FCFE ({predicted_fcfe:,.2f}B VND) is negative, below historical positive average ({avg_historical_fcfe:,.2f}B VND)<br>"
+            fcfe_metrics_text += f"• Company may require external financing to fund dividends or share repurchases<br>"
+            fcfe_metrics_text += f"• Evaluate capital structure and cash flow management strategies<br>"
+        else:
+            fcfe_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            fcfe_metrics_text += f"• Predicted FCFE ({predicted_fcfe:,.2f}B VND) is negative<br>"
+            fcfe_metrics_text += f"• Company lacks sufficient cash flow to fund equity shareholder returns<br>"
+            fcfe_metrics_text += f"• May need external financing or debt restructuring to maintain operations<br>"
 
     # Create visualization
     fig = go.Figure()
@@ -313,9 +347,76 @@ async def cashflow_dashboard(
     # Convert plot to HTML
     fcfe_metrics_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
 
+    # Build FCF annotation
+    # FCF (Free Cash Flow) annotation explanation
+    fcf_metrics_text = f"<b>About Free Cash Flow (FCF)</b><br>"
+    fcf_metrics_text += f"Checking a company's free cash flow (FCF), and especially checking the trend of free cash flow over time, can be useful to investors considering a company's stock. Shareholders can use FCF as a gauge of the company's ability to pay dividends or interest, while lenders may use it as a measure of a company's ability to take on additional debt. Free cash flow isn't listed on a company's financial statements and must be manually calculated from other data. Many financial websites provide a summary of FCF or a graph of FCF's trend for publicly traded companies.<br><br>"
+    fcf_metrics_text += f"<b>{prediction_year} Free Cash Flow for {symbol}</b><br>"
+    fcf_metrics_text += f"<b>Predicted FCF</b>: {predicted_fcf:,.2f}B VND<br><br>"
+    
+    # Check if actual FCF data exists
+    actual_fcf = None
+    if actual_prediction_mask.any():
+        actual_fcf = df_symbol[actual_prediction_mask]['freeCashFlow'].values[0]
+        difference_fcf = predicted_fcf - actual_fcf
+        percentage_diff_fcf = (difference_fcf / actual_fcf) * 100 if actual_fcf != 0 else 0
+        
+        fcf_metrics_text += f"<b>Comparison with Actual {prediction_year}:</b><br>"
+        fcf_metrics_text += f"• Actual {prediction_year}: {actual_fcf:,.2f}B VND<br>"
+        fcf_metrics_text += f"• Difference: {difference_fcf:,.2f}B VND ({percentage_diff_fcf:+.2f}%)<br><br>"
+    
+    # Add FCF assessment based on historical data and predicted value
+    historical_fcf = df_symbol['freeCashFlow'].values
+    historical_fcf_positive = historical_fcf[historical_fcf > 0]
+    
+    if len(historical_fcf_positive) > 0:
+        avg_historical_fcf = np.mean(historical_fcf_positive)
+        median_historical_fcf = np.median(historical_fcf_positive)
+    else:
+        avg_historical_fcf = 0
+        median_historical_fcf = 0
+    
+    fcf_metrics_text += f"<b>FCF Financial Health Assessment:</b><br>"
+    
+    # Assess based on positive/negative and comparison with historical data
+    if predicted_fcf > 0:
+        if len(historical_fcf_positive) > 0:
+            if predicted_fcf >= avg_historical_fcf * 1.2:
+                fcf_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+                fcf_metrics_text += f"• Predicted FCF ({predicted_fcf:,.2f}B VND) significantly exceeds historical average ({avg_historical_fcf:,.2f}B VND)<br>"
+                fcf_metrics_text += f"• Strong cash generation capability for all business activities<br>"
+                fcf_metrics_text += f"• Company demonstrates robust ability to fund operations and growth<br>"
+            elif predicted_fcf >= avg_historical_fcf * 0.8:
+                fcf_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+                fcf_metrics_text += f"• Predicted FCF ({predicted_fcf:,.2f}B VND) aligns with historical performance ({avg_historical_fcf:,.2f}B VND)<br>"
+                fcf_metrics_text += f"• Company can comfortably fund operations, dividends, and debt obligations<br>"
+                fcf_metrics_text += f"• Healthy cash flow generation for business sustainability<br>"
+            else:
+                fcf_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+                fcf_metrics_text += f"• Predicted FCF ({predicted_fcf:,.2f}B VND) is below historical average ({avg_historical_fcf:,.2f}B VND)<br>"
+                fcf_metrics_text += f"• Company can still fund operations but with reduced cash buffer<br>"
+                fcf_metrics_text += f"• Monitor cash flow trends and operational efficiency<br>"
+        else:
+            # No historical positive FCF data, but current is positive
+            fcf_metrics_text += f"• Expected Status: <b style='color:blue'>Positive Turnaround</b><br>"
+            fcf_metrics_text += f"• Predicted FCF ({predicted_fcf:,.2f}B VND) is positive, indicating improved cash generation<br>"
+            fcf_metrics_text += f"• Company shows potential to generate cash for business activities<br>"
+            fcf_metrics_text += f"• Monitor sustainability of positive cash flow trend<br>"
+    else:
+        # Negative FCF
+        if len(historical_fcf_positive) > 0:
+            fcf_metrics_text += f"• Expected Status: <b style='color:red'>Concerning</b><br>"
+            fcf_metrics_text += f"• Predicted FCF ({predicted_fcf:,.2f}B VND) is negative, below historical positive average ({avg_historical_fcf:,.2f}B VND)<br>"
+            fcf_metrics_text += f"• Company may require external financing to fund operations and obligations<br>"
+            fcf_metrics_text += f"• Evaluate operational efficiency and cash flow management strategies<br>"
+        else:
+            fcf_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            fcf_metrics_text += f"• Predicted FCF ({predicted_fcf:,.2f}B VND) is negative<br>"
+            fcf_metrics_text += f"• Company lacks sufficient cash flow to fund business activities<br>"
+            fcf_metrics_text += f"• May need external financing or operational restructuring to maintain operations<br>"
+
     # Create visualization
     fcf_chart = go.Figure()
-    actual_fcf = df_symbol[actual_prediction_mask]['freeCashFlow'].values[0]
     # Historical data
     fcf_chart.add_trace(
         go.Scatter(
@@ -342,7 +443,7 @@ async def cashflow_dashboard(
     )
 
     # Actual value if available
-    if actual_prediction_mask.any():
+    if actual_fcf is not None:
         fcf_chart.add_trace(
             go.Scatter(
                 x=[prediction_year],
@@ -376,6 +477,7 @@ async def cashflow_dashboard(
         "fcfe_metrics_html": fcfe_metrics_html,
         "fcfe_metrics_text": fcfe_metrics_text,
         "fcf_metrics_html": fcf_metrics_html,
+        "fcf_metrics_text": fcf_metrics_text,
         "symbols": symbols,
         "symbol": symbol,
     }

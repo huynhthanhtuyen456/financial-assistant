@@ -238,10 +238,13 @@ async def income_statement(
     correlation_metrics_html = fig.to_html(full_html=False)
 
     # Build annotation
-    gross_profit_margin_metrics_text = f"<b>{prediction_year} Current Ratio Prediction for {symbol}</b><br>"
-    gross_profit_margin_metrics_text += f"<b>Predicted Gross Profit Margin</b>: {predicted_gross_profit_margin:.2f}<br><br>"
+    # Gross Profit Margin annotation explanation
+    gross_profit_margin_metrics_text = f"<b>About Gross Profit Margin</b><br>"
+    gross_profit_margin_metrics_text += f"It's smart for investors to look at key financial metrics so they can make well-informed decisions about the companies they add to their portfolios. One important metric is the gross profit margin which you can calculate by subtracting the cost of goods sold from a company's revenue. Both figures are available on a company's income statement. A higher gross profit margin indicates a more profitable and efficient company. Comparing companies' margins within the same industry is essential, however, because this allows for a fair assessment due to similar operational variables.<br><br>"
+    gross_profit_margin_metrics_text += f"<b>{prediction_year} Gross Profit Margin for {symbol}</b><br>"
+    gross_profit_margin_metrics_text += f"<b>Predicted Gross Profit Margin</b>: {predicted_gross_profit_margin:.2f}%<br><br>"
     gross_profit_margin_metrics_text += f"<b>Predicted Components:</b><br>"
-    gross_profit_margin_metrics_text += f"• Predicted Pre Tax Profit: {predicted_pre_tax_profit:,.2f}B VND<br>"
+    gross_profit_margin_metrics_text += f"• Predicted Gross Profit: {predicted_gross_profit:,.2f}B VND<br>"
     gross_profit_margin_metrics_text += f"• Predicted Revenue: {predicted_revenue:,.2f}B VND<br><br>"
 
     # Check if actual data exists
@@ -254,27 +257,71 @@ async def income_statement(
         percentage_diff = (difference / actual_gross_profit_margin) * 100 if actual_gross_profit_margin != 0 else 0
 
         gross_profit_margin_metrics_text += f"<b>Comparison with Actual {prediction_year}:</b><br>"
-        gross_profit_margin_metrics_text += f"• Actual {prediction_year}: {actual_gross_profit_margin:.2f}<br>"
-        gross_profit_margin_metrics_text += f"• Difference: {difference:.2f} ({percentage_diff:+.2f}%)<br><br>"
+        gross_profit_margin_metrics_text += f"• Actual {prediction_year}: {actual_gross_profit_margin:.2f}%<br>"
+        gross_profit_margin_metrics_text += f"• Difference: {difference:.2f}% ({percentage_diff:+.2f}%)<br><br>"
 
-    # Add liquidity assessment
-    gross_profit_margin_metrics_text += f"<b>Predicted Liquidity Assessment:</b><br>"
-    if predicted_gross_profit_margin >= 2.0:
-        gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
-        gross_profit_margin_metrics_text += f"• Company has strong ability to cover short-term obligations<br>"
-        gross_profit_margin_metrics_text += f"• Current assets are {predicted_gross_profit_margin:.2f}x current liabilities<br>"
-    elif predicted_gross_profit_margin >= 1.5:
-        gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
-        gross_profit_margin_metrics_text += f"• Company can comfortably meet short-term obligations<br>"
-        gross_profit_margin_metrics_text += f"• Healthy liquidity position maintained<br>"
-    elif predicted_gross_profit_margin >= 1.0:
-        gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:orange'>Adequate</b><br>"
-        gross_profit_margin_metrics_text += f"• Company can meet obligations but with limited buffer<br>"
-        gross_profit_margin_metrics_text += f"• Monitor closely for liquidity issues<br>"
+    # Add gross profit margin assessment based on historical data and predicted value
+    historical_gross_profit_margin = df_symbol['gross_profit_margin'].values
+    historical_gross_profit_margin_positive = historical_gross_profit_margin[~np.isnan(historical_gross_profit_margin)]
+    
+    if len(historical_gross_profit_margin_positive) > 0:
+        avg_historical_gpm = np.mean(historical_gross_profit_margin_positive)
+        median_historical_gpm = np.median(historical_gross_profit_margin_positive)
+        min_historical_gpm = np.min(historical_gross_profit_margin_positive)
+        # Warning threshold: 15% or minimum historical, whichever is lower
+        warning_threshold = min(15.0, min_historical_gpm * 0.8) if min_historical_gpm > 0 else 15.0
     else:
-        gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
-        gross_profit_margin_metrics_text += f"• Current assets insufficient to cover current liabilities<br>"
-        gross_profit_margin_metrics_text += f"• Potential liquidity concerns - ratio below 1.0<br>"
+        avg_historical_gpm = 0
+        median_historical_gpm = 0
+        warning_threshold = 15.0
+    
+    gross_profit_margin_metrics_text += f"<b>Gross Profit Margin Financial Health Assessment:</b><br>"
+    
+    # Assess based on comparison with historical data and industry standards
+    if len(historical_gross_profit_margin_positive) > 0:
+        if predicted_gross_profit_margin >= avg_historical_gpm * 1.1:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) significantly exceeds historical average ({avg_historical_gpm:.2f}%)<br>"
+            gross_profit_margin_metrics_text += f"• Company demonstrates strong profitability and operational efficiency<br>"
+            gross_profit_margin_metrics_text += f"• Indicates effective cost management and pricing power<br>"
+        elif predicted_gross_profit_margin >= avg_historical_gpm * 0.9:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) aligns with historical performance ({avg_historical_gpm:.2f}%)<br>"
+            gross_profit_margin_metrics_text += f"• Company maintains healthy profitability levels<br>"
+            gross_profit_margin_metrics_text += f"• Consistent operational efficiency demonstrated<br>"
+        elif predicted_gross_profit_margin >= warning_threshold:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) is below historical average ({avg_historical_gpm:.2f}%)<br>"
+            gross_profit_margin_metrics_text += f"• Company can still maintain profitability but with reduced efficiency<br>"
+            gross_profit_margin_metrics_text += f"• Monitor cost structure and pricing strategies<br>"
+        else:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) is below warning threshold ({warning_threshold:.2f}%)<br>"
+            gross_profit_margin_metrics_text += f"• Low profitability may indicate pricing pressure or rising costs<br>"
+            gross_profit_margin_metrics_text += f"• Evaluate cost management and competitive positioning<br>"
+    else:
+        # No historical data available
+        if predicted_gross_profit_margin >= 30.0:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Strong</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) indicates strong profitability<br>"
+        elif predicted_gross_profit_margin >= warning_threshold:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Adequate</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) shows reasonable profitability<br>"
+        else:
+            gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) is below warning threshold ({warning_threshold:.2f}%)<br>"
+            gross_profit_margin_metrics_text += f"• Low profitability may require operational improvements<br>"
+
+    # Calculate warning threshold for chart
+    historical_gross_profit_margin = df_symbol['gross_profit_margin'].values
+    historical_gross_profit_margin_positive = historical_gross_profit_margin[~np.isnan(historical_gross_profit_margin)]
+    
+    if len(historical_gross_profit_margin_positive) > 0:
+        min_historical_gpm = np.min(historical_gross_profit_margin_positive)
+        # Warning threshold: 15% or minimum historical * 0.8, whichever is lower
+        warning_threshold = min(15.0, min_historical_gpm * 0.8) if min_historical_gpm > 0 else 15.0
+    else:
+        warning_threshold = 15.0
 
     # Create visualization
     fig = go.Figure()
@@ -288,7 +335,7 @@ async def income_statement(
             name='Historical',
             line=dict(color='blue', width=2),
             marker=dict(size=8),
-            hovertemplate='Year: %{x}<br>Current Gross Profit Margin: %{y:.2f}<extra></extra>'
+            hovertemplate='Year: %{x}<br>Gross Profit Margin: %{y:.2f}%<extra></extra>'
         )
     )
 
@@ -300,7 +347,7 @@ async def income_statement(
             mode='markers',
             name='Prediction',
             marker=dict(color='red', size=12, symbol='square'),
-            hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}<extra></extra>'
+            hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}%<extra></extra>'
         )
     )
 
@@ -313,16 +360,29 @@ async def income_statement(
                 mode='markers',
                 name=f'Actual {prediction_year}',
                 marker=dict(color='green', size=14, symbol='diamond'),
-                hovertemplate='Year: %{x}<br>Actual: %{y:.2f}<extra></extra>'
+                hovertemplate='Year: %{x}<br>Actual: %{y:.2f}%<extra></extra>'
             )
         )
+
+    # Add warning threshold line (bottom line)
+    min_year = df_symbol['year'].min()
+    max_year = max(df_symbol['year'].max(), prediction_year)
+    fig.add_hline(
+        y=warning_threshold,
+        line_dash="dash",
+        line_color="red",
+        annotation_text=f"Warning Level ({warning_threshold:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="red", size=12)),
+        opacity=0.7
+    )
 
     # Update layout
     fig.update_layout(
         title=f'LSTM Gross Profit Margin Indicator - '
               f'The money a company makes after accounting for its business costs - {symbol}',
         xaxis_title='Year',
-        yaxis_title='Current Gross Profit Margin',
+        yaxis_title='Gross Profit Margin (%)',
         height=600,
         showlegend=True,
         hovermode='x unified',
@@ -332,9 +392,93 @@ async def income_statement(
     # Convert plot to HTML
     gross_profit_margin_metrics_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
 
+    # Build Net Profit Margin annotation
+    # Net Profit Margin annotation explanation
+    net_profit_margin_metrics_text = f"<b>About Net Profit Margin</b><br>"
+    net_profit_margin_metrics_text += f"The net profit margin indicates a business's profits as a percentage of total revenue. In addition to other measures, the net margin is a key indicator of a company's profitability and can be used to determine whether a business's strategy is working or whether changes to increase profitability are needed. For investors, a healthy and stable net profit margin is a positive sign of financial strength and operational efficiency.<br><br>"
+    net_profit_margin_metrics_text += f"<b>{prediction_year} Net Profit Margin for {symbol}</b><br>"
+    net_profit_margin_metrics_text += f"<b>Predicted Net Profit Margin</b>: {predicted_net_profit_margin:.2f}%<br><br>"
+    net_profit_margin_metrics_text += f"<b>Predicted Components:</b><br>"
+    net_profit_margin_metrics_text += f"• Predicted Post Tax Profit: {predicted_post_tax_profit:,.2f}B VND<br>"
+    net_profit_margin_metrics_text += f"• Predicted Revenue: {predicted_revenue:,.2f}B VND<br><br>"
+
+    # Check if actual data exists
+    actual_net_profit_margin = None
+    if actual_prediction_mask.any():
+        actual_net_profit_margin = df_symbol[actual_prediction_mask]['net_profit_margin'].values[0]
+        difference_npm = predicted_net_profit_margin - actual_net_profit_margin
+        percentage_diff_npm = (difference_npm / actual_net_profit_margin) * 100 if actual_net_profit_margin != 0 else 0
+
+        net_profit_margin_metrics_text += f"<b>Comparison with Actual {prediction_year}:</b><br>"
+        net_profit_margin_metrics_text += f"• Actual {prediction_year}: {actual_net_profit_margin:.2f}%<br>"
+        net_profit_margin_metrics_text += f"• Difference: {difference_npm:.2f}% ({percentage_diff_npm:+.2f}%)<br><br>"
+
+    # Add net profit margin assessment based on historical data and predicted value
+    historical_net_profit_margin = df_symbol['net_profit_margin'].values
+    historical_npm_positive = historical_net_profit_margin[~np.isnan(historical_net_profit_margin)]
+    
+    if len(historical_npm_positive) > 0:
+        avg_historical_npm = np.mean(historical_npm_positive)
+        median_historical_npm = np.median(historical_npm_positive)
+        min_historical_npm = np.min(historical_npm_positive)
+        # Warning threshold: 5% or minimum historical * 0.8, whichever is lower
+        warning_threshold_npm = min(5.0, min_historical_npm * 0.8) if min_historical_npm > 0 else 5.0
+    else:
+        avg_historical_npm = 0
+        median_historical_npm = 0
+        warning_threshold_npm = 5.0
+    
+    net_profit_margin_metrics_text += f"<b>Net Profit Margin Financial Health Assessment:</b><br>"
+    
+    # Assess based on comparison with historical data
+    if len(historical_npm_positive) > 0:
+        if predicted_net_profit_margin >= avg_historical_npm * 1.1:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) significantly exceeds historical average ({avg_historical_npm:.2f}%)<br>"
+            net_profit_margin_metrics_text += f"• Company demonstrates strong profitability and financial strength<br>"
+            net_profit_margin_metrics_text += f"• Indicates effective business strategy and operational efficiency<br>"
+        elif predicted_net_profit_margin >= avg_historical_npm * 0.9:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) aligns with historical performance ({avg_historical_npm:.2f}%)<br>"
+            net_profit_margin_metrics_text += f"• Company maintains healthy profitability levels<br>"
+            net_profit_margin_metrics_text += f"• Stable financial strength and operational efficiency demonstrated<br>"
+        elif predicted_net_profit_margin >= warning_threshold_npm:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) is below historical average ({avg_historical_npm:.2f}%)<br>"
+            net_profit_margin_metrics_text += f"• Company can still maintain profitability but with reduced efficiency<br>"
+            net_profit_margin_metrics_text += f"• Monitor business strategy and operational improvements<br>"
+        else:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) is below warning threshold ({warning_threshold_npm:.2f}%)<br>"
+            net_profit_margin_metrics_text += f"• Low profitability may indicate operational challenges or strategy issues<br>"
+            net_profit_margin_metrics_text += f"• Evaluate business strategy and consider changes to increase profitability<br>"
+    else:
+        # No historical data available
+        if predicted_net_profit_margin >= 10.0:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Strong</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) indicates strong profitability<br>"
+        elif predicted_net_profit_margin >= warning_threshold_npm:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Adequate</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) shows reasonable profitability<br>"
+        else:
+            net_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) is below warning threshold ({warning_threshold_npm:.2f}%)<br>"
+            net_profit_margin_metrics_text += f"• Low profitability may require strategic changes to improve performance<br>"
+
+    # Calculate warning threshold for chart
+    historical_net_profit_margin = df_symbol['net_profit_margin'].values
+    historical_npm_positive = historical_net_profit_margin[~np.isnan(historical_net_profit_margin)]
+    
+    if len(historical_npm_positive) > 0:
+        min_historical_npm = np.min(historical_npm_positive)
+        # Warning threshold: 5% or minimum historical * 0.8, whichever is lower
+        warning_threshold_npm = min(5.0, min_historical_npm * 0.8) if min_historical_npm > 0 else 5.0
+    else:
+        warning_threshold_npm = 5.0
+
     # Create visualization
     net_profit_margin_chart = go.Figure()
-    actual_net_profit_margin = df_symbol[actual_prediction_mask]['net_profit_margin'].values[0]
+
     # Historical data
     net_profit_margin_chart.add_trace(
         go.Scatter(
@@ -344,7 +488,7 @@ async def income_statement(
             name='Historical',
             line=dict(color='blue', width=2),
             marker=dict(size=8),
-            hovertemplate='Year: %{x}<br>Current Net Profit Margin: %{y:.2f}<extra></extra>'
+            hovertemplate='Year: %{x}<br>Net Profit Margin: %{y:.2f}%<extra></extra>'
         )
     )
 
@@ -356,12 +500,12 @@ async def income_statement(
             mode='markers',
             name='Prediction',
             marker=dict(color='red', size=12, symbol='square'),
-            hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}<extra></extra>'
+            hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}%<extra></extra>'
         )
     )
 
     # Actual value if available
-    if actual_prediction_mask.any():
+    if actual_net_profit_margin is not None:
         net_profit_margin_chart.add_trace(
             go.Scatter(
                 x=[prediction_year],
@@ -369,16 +513,27 @@ async def income_statement(
                 mode='markers',
                 name=f'Actual {prediction_year}',
                 marker=dict(color='green', size=14, symbol='diamond'),
-                hovertemplate='Year: %{x}<br>Actual: %{y:.2f}<extra></extra>'
+                hovertemplate='Year: %{x}<br>Actual: %{y:.2f}%<extra></extra>'
             )
         )
+
+    # Add warning threshold line (bottom line)
+    net_profit_margin_chart.add_hline(
+        y=warning_threshold_npm,
+        line_dash="dash",
+        line_color="red",
+        annotation_text=f"Warning Level ({warning_threshold_npm:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="red", size=12)),
+        opacity=0.7
+    )
 
     # Update layout
     net_profit_margin_chart.update_layout(
         title=f'LSTM Net Profit Margin Indicator - '
               f'How much profit (or net income) a business generates - {symbol}',
         xaxis_title='Year',
-        yaxis_title='Current Net Profit Margin',
+        yaxis_title='Net Profit Margin (%)',
         height=600,
         showlegend=True,
         hovermode='x unified',
@@ -388,9 +543,89 @@ async def income_statement(
     # Convert plot to HTML
     net_profit_margin_metrics_html = net_profit_margin_chart.to_html(full_html=False, include_plotlyjs='cdn')
 
+    # Build Operating Profit Margin annotation
+    # Operating Profit Margin annotation explanation
+    operating_profit_margin_metrics_text = f"<b>About Operating Profit Margin</b><br>"
+    operating_profit_margin_metrics_text += f"Highly variable operating margins are a prime indicator of business risk. By the same token, looking at a company's past operating margins is a good way to gauge whether a company's performance has been getting better. The operating margin can improve through better management controls, more efficient use of resources, improved pricing, and more effective marketing.<br><br>"
+    operating_profit_margin_metrics_text += f"<b>{prediction_year} Operating Profit Margin for {symbol}</b><br>"
+    operating_profit_margin_metrics_text += f"<b>Predicted Operating Profit Margin</b>: {predicted_operating_profit_margin:.2f}%<br><br>"
+    operating_profit_margin_metrics_text += f"<b>Predicted Components:</b><br>"
+    operating_profit_margin_metrics_text += f"• Predicted Pre Tax Profit: {predicted_pre_tax_profit:,.2f}B VND<br>"
+    operating_profit_margin_metrics_text += f"• Predicted Revenue: {predicted_revenue:,.2f}B VND<br><br>"
+
+    # Check if actual data exists
+    actual_operating_profit_margin = None
+    if actual_prediction_mask.any():
+        actual_operating_profit_margin = df_symbol[actual_prediction_mask]['operating_profit_margin'].values[0]
+        difference_opm = predicted_operating_profit_margin - actual_operating_profit_margin
+        percentage_diff_opm = (difference_opm / actual_operating_profit_margin) * 100 if actual_operating_profit_margin != 0 else 0
+
+        operating_profit_margin_metrics_text += f"<b>Comparison with Actual {prediction_year}:</b><br>"
+        operating_profit_margin_metrics_text += f"• Actual {prediction_year}: {actual_operating_profit_margin:.2f}%<br>"
+        operating_profit_margin_metrics_text += f"• Difference: {difference_opm:.2f}% ({percentage_diff_opm:+.2f}%)<br><br>"
+
+    # Add operating profit margin assessment based on historical data and predicted value
+    historical_operating_profit_margin = df_symbol['operating_profit_margin'].values
+    historical_opm_positive = historical_operating_profit_margin[~np.isnan(historical_operating_profit_margin)]
+    
+    if len(historical_opm_positive) > 0:
+        avg_historical_opm = np.mean(historical_opm_positive)
+        median_historical_opm = np.median(historical_opm_positive)
+        min_historical_opm = np.min(historical_opm_positive)
+        std_historical_opm = np.std(historical_opm_positive)
+        # Warning threshold: 10% or minimum historical * 0.8, whichever is lower
+        warning_threshold_opm = min(10.0, min_historical_opm * 0.8) if min_historical_opm > 0 else 10.0
+        # Check for high variability (risk indicator)
+        coefficient_of_variation = (std_historical_opm / avg_historical_opm) * 100 if avg_historical_opm != 0 else 0
+    else:
+        avg_historical_opm = 0
+        median_historical_opm = 0
+        warning_threshold_opm = 10.0
+        coefficient_of_variation = 0
+    
+    operating_profit_margin_metrics_text += f"<b>Operating Profit Margin Financial Health Assessment:</b><br>"
+    
+    # Assess based on comparison with historical data and variability
+    if len(historical_opm_positive) > 0:
+        # Check for high variability (risk indicator)
+        if coefficient_of_variation > 30:
+            operating_profit_margin_metrics_text += f"• <b style='color:orange'>Risk Indicator:</b> High margin variability ({coefficient_of_variation:.1f}% CV) suggests business risk<br>"
+        
+        if predicted_operating_profit_margin >= avg_historical_opm * 1.1:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) significantly exceeds historical average ({avg_historical_opm:.2f}%)<br>"
+            operating_profit_margin_metrics_text += f"• Company demonstrates improving operational efficiency and management controls<br>"
+            operating_profit_margin_metrics_text += f"• Indicates effective resource utilization and pricing strategies<br>"
+        elif predicted_operating_profit_margin >= avg_historical_opm * 0.9:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) aligns with historical performance ({avg_historical_opm:.2f}%)<br>"
+            operating_profit_margin_metrics_text += f"• Company maintains stable operational efficiency<br>"
+            operating_profit_margin_metrics_text += f"• Consistent management controls and resource utilization<br>"
+        elif predicted_operating_profit_margin >= warning_threshold_opm:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) is below historical average ({avg_historical_opm:.2f}%)<br>"
+            operating_profit_margin_metrics_text += f"• Company can still maintain operations but with reduced efficiency<br>"
+            operating_profit_margin_metrics_text += f"• Monitor management controls and operational improvements<br>"
+        else:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) is below warning threshold ({warning_threshold_opm:.2f}%)<br>"
+            operating_profit_margin_metrics_text += f"• Low operating margin may indicate operational challenges or pricing pressure<br>"
+            operating_profit_margin_metrics_text += f"• Evaluate management controls, resource efficiency, and pricing strategies<br>"
+    else:
+        # No historical data available
+        if predicted_operating_profit_margin >= 15.0:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Strong</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) indicates strong operational efficiency<br>"
+        elif predicted_operating_profit_margin >= warning_threshold_opm:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Adequate</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) shows reasonable operational efficiency<br>"
+        else:
+            operating_profit_margin_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            operating_profit_margin_metrics_text += f"• Predicted margin ({predicted_operating_profit_margin:.2f}%) is below warning threshold ({warning_threshold_opm:.2f}%)<br>"
+            operating_profit_margin_metrics_text += f"• Low operating margin may require operational improvements<br>"
+
     # Create visualization
     operating_profit_margin_chart = go.Figure()
-    actual_operating_profit_margin = df_symbol[actual_prediction_mask]['operating_profit_margin'].values[0]
     # Historical data
     operating_profit_margin_chart.add_trace(
         go.Scatter(
@@ -400,7 +635,7 @@ async def income_statement(
             name='Historical',
             line=dict(color='blue', width=2),
             marker=dict(size=8),
-            hovertemplate='Year: %{x}<br>Current Operating Profit Margin: %{y:.2f}<extra></extra>'
+            hovertemplate='Year: %{x}<br>Operating Profit Margin: %{y:.2f}%<extra></extra>'
         )
     )
 
@@ -412,12 +647,12 @@ async def income_statement(
             mode='markers',
             name='Prediction',
             marker=dict(color='red', size=12, symbol='square'),
-            hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}<extra></extra>'
+            hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}%<extra></extra>'
         )
     )
 
     # Actual value if available
-    if actual_prediction_mask.any():
+    if actual_operating_profit_margin is not None:
         operating_profit_margin_chart.add_trace(
             go.Scatter(
                 x=[prediction_year],
@@ -425,16 +660,27 @@ async def income_statement(
                 mode='markers',
                 name=f'Actual {prediction_year}',
                 marker=dict(color='green', size=14, symbol='diamond'),
-                hovertemplate='Year: %{x}<br>Actual: %{y:.2f}<extra></extra>'
+                hovertemplate='Year: %{x}<br>Actual: %{y:.2f}%<extra></extra>'
             )
         )
+
+    # Add warning threshold line (bottom line)
+    operating_profit_margin_chart.add_hline(
+        y=warning_threshold_opm,
+        line_dash="dash",
+        line_color="red",
+        annotation_text=f"Warning Level ({warning_threshold_opm:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="red", size=12)),
+        opacity=0.7
+    )
 
     # Update layout
     operating_profit_margin_chart.update_layout(
         title=f'LSTM Operating Profit Margin Indicator - '
               f'Pre tax profit created on every VND revenue - {symbol}',
         xaxis_title='Year',
-        yaxis_title='Current Net Profit Margin',
+        yaxis_title='Operating Profit Margin (%)',
         height=600,
         showlegend=True,
         hovermode='x unified',
@@ -451,7 +697,9 @@ async def income_statement(
         "gross_profit_margin_metrics_html": gross_profit_margin_metrics_html,
         "gross_profit_margin_metrics_text": gross_profit_margin_metrics_text,
         "net_profit_margin_metrics_html": net_profit_margin_metrics_html,
+        "net_profit_margin_metrics_text": net_profit_margin_metrics_text,
         "operating_profit_margin_metrics_html": operating_profit_margin_metrics_html,
+        "operating_profit_margin_metrics_text": operating_profit_margin_metrics_text,
         "symbols": symbols,
         "symbol": symbol,
     }
