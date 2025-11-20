@@ -105,6 +105,70 @@
             padding-bottom: 0.5rem;
             border-bottom: 2px solid #667eea;
         }
+        .health-score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .health-score-value {
+            font-size: 4rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .health-status {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+        .category-score {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .category-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .score-bar {
+            height: 30px;
+            background-color: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+        .insight-item {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        .recommendation-item {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -255,6 +319,141 @@
                         N/A
                         {% endif %}
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Health Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="section-title"><i class="fas fa-heartbeat"></i> Financial Health Overview</h5>
+                
+                <!-- Overall Health Score -->
+                <div class="health-score-card">
+                    <div class="text-center">
+                        <h4 class="mb-3"><i class="fas fa-chart-pie"></i> Overall Financial Health Score</h4>
+                        <div class="health-score-value">{{ "{:.1f}".format(health_overview.overall.score) }}</div>
+                        <div class="health-status">
+                            <i class="fas {{ health_overview.overall.status_icon }}"></i>
+                            <span class="badge bg-{{ health_overview.overall.status_color }} fs-6">{{ health_overview.overall.status }}</span>
+                        </div>
+                        <p class="mt-3 mb-0">Based on comprehensive analysis of profitability, liquidity, solvency, and growth metrics</p>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown -->
+                <div class="row">
+                    <!-- Profitability -->
+                    <div class="col-md-6 mb-3">
+                        <div class="category-score">
+                            <div class="category-title">
+                                <i class="fas fa-chart-line"></i> Profitability
+                                <span class="float-end">{{ "{:.0f}".format(health_overview.profitability.score) }}/100</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: {{ health_overview.profitability.score }}%;">
+                                    {{ "{:.0f}%".format(health_overview.profitability.score) }}
+                                </div>
+                            </div>
+                            <div class="insights-section">
+                                <strong>Key Insights:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    {% for insight in health_overview.profitability.insights %}
+                                    <li class="insight-item">
+                                        <i class="fas fa-info-circle text-primary"></i> {{ insight }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Liquidity -->
+                    <div class="col-md-6 mb-3">
+                        <div class="category-score">
+                            <div class="category-title">
+                                <i class="fas fa-tint"></i> Liquidity
+                                <span class="float-end">{{ "{:.0f}".format(health_overview.liquidity.score) }}/100</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: {{ health_overview.liquidity.score }}%;">
+                                    {{ "{:.0f}%".format(health_overview.liquidity.score) }}
+                                </div>
+                            </div>
+                            <div class="insights-section">
+                                <strong>Key Insights:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    {% for insight in health_overview.liquidity.insights %}
+                                    <li class="insight-item">
+                                        <i class="fas fa-info-circle text-primary"></i> {{ insight }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Solvency -->
+                    <div class="col-md-6 mb-3">
+                        <div class="category-score">
+                            <div class="category-title">
+                                <i class="fas fa-shield-alt"></i> Solvency
+                                <span class="float-end">{{ "{:.0f}".format(health_overview.solvency.score) }}/100</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: {{ health_overview.solvency.score }}%;">
+                                    {{ "{:.0f}%".format(health_overview.solvency.score) }}
+                                </div>
+                            </div>
+                            <div class="insights-section">
+                                <strong>Key Insights:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    {% for insight in health_overview.solvency.insights %}
+                                    <li class="insight-item">
+                                        <i class="fas fa-info-circle text-primary"></i> {{ insight }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Growth -->
+                    <div class="col-md-6 mb-3">
+                        <div class="category-score">
+                            <div class="category-title">
+                                <i class="fas fa-rocket"></i> Growth
+                                <span class="float-end">{{ "{:.0f}".format(health_overview.growth.score) }}/100</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: {{ health_overview.growth.score }}%;">
+                                    {{ "{:.0f}%".format(health_overview.growth.score) }}
+                                </div>
+                            </div>
+                            <div class="insights-section">
+                                <strong>Key Insights:</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    {% for insight in health_overview.growth.insights %}
+                                    <li class="insight-item">
+                                        <i class="fas fa-info-circle text-primary"></i> {{ insight }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="chart-container">
+                    <h5 class="section-title"><i class="fas fa-lightbulb"></i> Key Recommendations</h5>
+                    <ul class="list-unstyled">
+                        {% for recommendation in health_overview.recommendations %}
+                        <li class="recommendation-item">
+                            <i class="fas fa-arrow-right text-warning"></i> {{ recommendation }}
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>

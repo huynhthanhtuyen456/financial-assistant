@@ -154,6 +154,252 @@ async def overall_dashboard(
         summary['latest_roa'] = float(df_fr['roa'].iloc[-1]) if 'roa' in df_fr.columns else 0
         summary['latest_current_ratio'] = float(df_fr['currentRatio'].iloc[-1]) if 'currentRatio' in df_fr.columns else 0
         summary['latest_debt_ratio'] = float(df_fr['debtRatio'].iloc[-1]) if 'debtRatio' in df_fr.columns else 0
+        summary['latest_quick_ratio'] = float(df_fr['quickRatio'].iloc[-1]) if 'quickRatio' in df_fr.columns else 0
+    
+    # Calculate Financial Health Overview
+    health_overview = {}
+    
+    # Profitability Assessment
+    profitability_score = 0
+    profitability_insights = []
+    
+    if summary.get('latest_roe', 0) > 0:
+        if summary['latest_roe'] >= 15:
+            profitability_score += 30
+            profitability_insights.append("Excellent ROE (≥15%) indicates strong shareholder returns")
+        elif summary['latest_roe'] >= 10:
+            profitability_score += 20
+            profitability_insights.append("Good ROE (10-15%) shows decent profitability")
+        elif summary['latest_roe'] >= 5:
+            profitability_score += 10
+            profitability_insights.append("Moderate ROE (5-10%) suggests room for improvement")
+        else:
+            profitability_insights.append("Low ROE (<5%) indicates weak profitability")
+    
+    if summary.get('latest_roa', 0) > 0:
+        if summary['latest_roa'] >= 10:
+            profitability_score += 20
+            profitability_insights.append("Strong ROA (≥10%) shows efficient asset utilization")
+        elif summary['latest_roa'] >= 5:
+            profitability_score += 15
+            profitability_insights.append("Decent ROA (5-10%) indicates reasonable efficiency")
+        elif summary['latest_roa'] >= 2:
+            profitability_score += 10
+            profitability_insights.append("Moderate ROA (2-5%) suggests average performance")
+        else:
+            profitability_insights.append("Low ROA (<2%) indicates inefficient asset use")
+    
+    if summary.get('latest_profit_margin', 0) > 0:
+        if summary['latest_profit_margin'] >= 15:
+            profitability_score += 25
+            profitability_insights.append("High profit margin (≥15%) indicates strong pricing power")
+        elif summary['latest_profit_margin'] >= 10:
+            profitability_score += 20
+            profitability_insights.append("Good profit margin (10-15%) shows healthy operations")
+        elif summary['latest_profit_margin'] >= 5:
+            profitability_score += 15
+            profitability_insights.append("Moderate profit margin (5-10%) is acceptable")
+        else:
+            profitability_insights.append("Low profit margin (<5%) may indicate cost pressures")
+    
+    if summary.get('latest_profit', 0) > 0:
+        profitability_score += 25
+        profitability_insights.append("Company is generating positive net profit")
+    else:
+        profitability_insights.append("⚠️ Company is reporting losses - critical concern")
+    
+    health_overview['profitability'] = {
+        'score': min(100, profitability_score),
+        'insights': profitability_insights
+    }
+    
+    # Liquidity Assessment
+    liquidity_score = 0
+    liquidity_insights = []
+    
+    if summary.get('latest_current_ratio', 0) > 0:
+        if summary['latest_current_ratio'] >= 2.0:
+            liquidity_score += 40
+            liquidity_insights.append("Strong current ratio (≥2.0) indicates excellent short-term liquidity")
+        elif summary['latest_current_ratio'] >= 1.5:
+            liquidity_score += 30
+            liquidity_insights.append("Good current ratio (1.5-2.0) shows healthy liquidity position")
+        elif summary['latest_current_ratio'] >= 1.0:
+            liquidity_score += 20
+            liquidity_insights.append("Adequate current ratio (1.0-1.5) meets minimum requirements")
+        else:
+            liquidity_insights.append("⚠️ Low current ratio (<1.0) indicates potential liquidity risk")
+    
+    if summary.get('latest_quick_ratio', 0) > 0:
+        if summary['latest_quick_ratio'] >= 1.0:
+            liquidity_score += 30
+            liquidity_insights.append("Strong quick ratio (≥1.0) shows good immediate liquidity")
+        elif summary['latest_quick_ratio'] >= 0.7:
+            liquidity_score += 20
+            liquidity_insights.append("Acceptable quick ratio (0.7-1.0) indicates reasonable liquidity")
+        else:
+            liquidity_insights.append("Low quick ratio (<0.7) may indicate cash flow concerns")
+    
+    if summary.get('latest_fcf', 0) > 0:
+        liquidity_score += 30
+        liquidity_insights.append("Positive free cash flow supports operational flexibility")
+    else:
+        liquidity_insights.append("⚠️ Negative free cash flow may limit financial flexibility")
+    
+    health_overview['liquidity'] = {
+        'score': min(100, liquidity_score),
+        'insights': liquidity_insights
+    }
+    
+    # Solvency Assessment
+    solvency_score = 0
+    solvency_insights = []
+    
+    if summary.get('latest_debt_ratio', 0) > 0:
+        if summary['latest_debt_ratio'] <= 30:
+            solvency_score += 40
+            solvency_insights.append("Low debt ratio (≤30%) indicates strong financial stability")
+        elif summary['latest_debt_ratio'] <= 50:
+            solvency_score += 30
+            solvency_insights.append("Moderate debt ratio (30-50%) shows manageable leverage")
+        elif summary['latest_debt_ratio'] <= 70:
+            solvency_score += 20
+            solvency_insights.append("High debt ratio (50-70%) requires careful monitoring")
+        else:
+            solvency_insights.append("⚠️ Very high debt ratio (>70%) indicates significant financial risk")
+    
+    # Calculate debt-to-equity if possible
+    if summary.get('latest_debt', 0) > 0 and summary.get('latest_equity', 0) > 0:
+        debt_to_equity = (summary['latest_debt'] / summary['latest_equity']) * 100 if summary['latest_equity'] > 0 else 0
+        if debt_to_equity <= 50:
+            solvency_score += 30
+            solvency_insights.append("Low debt-to-equity (≤50%) shows conservative capital structure")
+        elif debt_to_equity <= 100:
+            solvency_score += 20
+            solvency_insights.append("Moderate debt-to-equity (50-100%) is acceptable")
+        elif debt_to_equity <= 150:
+            solvency_score += 10
+            solvency_insights.append("High debt-to-equity (100-150%) indicates elevated risk")
+        else:
+            solvency_insights.append("⚠️ Very high debt-to-equity (>150%) is concerning")
+    elif summary.get('latest_equity', 0) > 0:
+        solvency_score += 30
+        solvency_insights.append("Positive equity base provides financial cushion")
+    
+    if summary.get('latest_fcf', 0) > 0:
+        solvency_score += 30
+        solvency_insights.append("Positive cash flow supports debt servicing capability")
+    
+    health_overview['solvency'] = {
+        'score': min(100, solvency_score),
+        'insights': solvency_insights
+    }
+    
+    # Growth Assessment
+    growth_score = 0
+    growth_insights = []
+    
+    if summary.get('revenue_growth', 0) > 0:
+        if summary['revenue_growth'] >= 20:
+            growth_score += 35
+            growth_insights.append(f"Strong revenue growth ({summary['revenue_growth']:.1f}%) indicates expanding business")
+        elif summary['revenue_growth'] >= 10:
+            growth_score += 25
+            growth_insights.append(f"Good revenue growth ({summary['revenue_growth']:.1f}%) shows healthy expansion")
+        elif summary['revenue_growth'] >= 5:
+            growth_score += 15
+            growth_insights.append(f"Moderate revenue growth ({summary['revenue_growth']:.1f}%) is steady")
+        else:
+            growth_insights.append(f"Slow revenue growth ({summary['revenue_growth']:.1f}%) may indicate market challenges")
+    elif summary.get('revenue_growth', 0) < 0:
+        growth_insights.append(f"⚠️ Declining revenue ({summary['revenue_growth']:.1f}%) is a major concern")
+    
+    if summary.get('profit_growth', 0) > 0:
+        if summary['profit_growth'] >= 20:
+            growth_score += 35
+            growth_insights.append(f"Excellent profit growth ({summary['profit_growth']:.1f}%) shows improving efficiency")
+        elif summary['profit_growth'] >= 10:
+            growth_score += 25
+            growth_insights.append(f"Good profit growth ({summary['profit_growth']:.1f}%) indicates positive trends")
+        elif summary['profit_growth'] >= 5:
+            growth_score += 15
+            growth_insights.append(f"Moderate profit growth ({summary['profit_growth']:.1f}%) is acceptable")
+        else:
+            growth_insights.append(f"Slow profit growth ({summary['profit_growth']:.1f}%) needs attention")
+    elif summary.get('profit_growth', 0) < 0:
+        growth_insights.append(f"⚠️ Declining profits ({summary['profit_growth']:.1f}%) is concerning")
+    
+    if summary.get('asset_growth', 0) > 0:
+        if summary['asset_growth'] >= 15:
+            growth_score += 30
+            growth_insights.append(f"Strong asset growth ({summary['asset_growth']:.1f}%) shows expansion")
+        elif summary['asset_growth'] >= 5:
+            growth_score += 20
+            growth_insights.append(f"Moderate asset growth ({summary['asset_growth']:.1f}%) indicates steady development")
+        else:
+            growth_insights.append(f"Slow asset growth ({summary['asset_growth']:.1f}%) may limit future capacity")
+    
+    health_overview['growth'] = {
+        'score': min(100, growth_score),
+        'insights': growth_insights
+    }
+    
+    # Overall Health Score (weighted average)
+    total_score = (
+        health_overview['profitability']['score'] * 0.35 +
+        health_overview['liquidity']['score'] * 0.25 +
+        health_overview['solvency']['score'] * 0.25 +
+        health_overview['growth']['score'] * 0.15
+    )
+    
+    # Determine health status
+    if total_score >= 80:
+        health_status = "Excellent"
+        health_status_color = "success"
+        health_status_icon = "fa-check-circle"
+    elif total_score >= 65:
+        health_status = "Good"
+        health_status_color = "info"
+        health_status_icon = "fa-thumbs-up"
+    elif total_score >= 50:
+        health_status = "Fair"
+        health_status_color = "warning"
+        health_status_icon = "fa-exclamation-triangle"
+    else:
+        health_status = "Poor"
+        health_status_color = "danger"
+        health_status_icon = "fa-exclamation-circle"
+    
+    health_overview['overall'] = {
+        'score': round(total_score, 1),
+        'status': health_status,
+        'status_color': health_status_color,
+        'status_icon': health_status_icon
+    }
+    
+    # Key Recommendations
+    recommendations = []
+    
+    if health_overview['profitability']['score'] < 50:
+        recommendations.append("Focus on improving profitability through cost optimization or revenue enhancement")
+    
+    if health_overview['liquidity']['score'] < 50:
+        recommendations.append("Improve liquidity position by managing working capital more efficiently")
+    
+    if health_overview['solvency']['score'] < 50:
+        recommendations.append("Consider reducing debt levels or strengthening equity base to improve solvency")
+    
+    if health_overview['growth']['score'] < 50:
+        recommendations.append("Develop strategies to accelerate revenue and profit growth")
+    
+    if total_score >= 80:
+        recommendations.append("Maintain current strong financial position and continue monitoring key metrics")
+    elif total_score >= 65:
+        recommendations.append("Continue current strategies while addressing identified weaknesses")
+    else:
+        recommendations.append("Immediate action required to address financial health concerns")
+    
+    health_overview['recommendations'] = recommendations
     
     # Create visualizations using Plotly
     visualizations = {}
@@ -358,6 +604,7 @@ async def overall_dashboard(
         "prediction_year": prediction_year,
         "yearly": yearly,
         "summary": summary,
+        "health_overview": health_overview,
         "visualizations": visualizations,
         "df_bs": df_bs.to_dict('records') if len(df_bs) > 0 else [],
         "df_cf": df_cf.to_dict('records') if len(df_cf) > 0 else [],
