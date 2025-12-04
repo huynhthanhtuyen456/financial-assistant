@@ -17,6 +17,21 @@ router = APIRouter(
 templates = Jinja2Templates(directory="templates")
 
 
+GROSS_PROFIT_MARGIN_BRIEF = """
+To assess company efficiency, investors should look at gross profit margin (Revenue less COGS). While higher margins 
+signal profitability, they must be compared against industry competitors to account for similar 
+operational variables.<br><br>
+"""
+NET_PROFIT_MARGIN_BRIEF = """
+Net profit margin (profit as a percentage of revenue) helps determine if a business strategy is working. 
+Investors view stable margins as positive indicators of financial strength and efficiency.<br><br>
+"""
+OPERATING_PROFIT_MARGIN_BRIEF = """
+Operating margin volatility signals risk. Historical analysis tracks performance, with improvements driven by efficient 
+resource use, pricing power, and strong management controls.<br><br>
+"""
+
+
 @router.get("/", response_class=HTMLResponse)
 async def income_statement(
         request: Request, session: AsyncSession = Depends(session_manager.session),
@@ -78,7 +93,8 @@ async def income_statement(
 
     # Calculate correlation matrix for all balance sheet features
     # Filter out non-numeric columns and ensure feature columns exist
-    numeric_cols = [col for col in feature_cols if col in df_income_statement.columns]
+    numeric_cols = [col for col in feature_cols]
+    df_income_statement[numeric_cols] = df_income_statement[numeric_cols].astype(float)
 
     if len(numeric_cols) < 2:
         # Fallback: create empty heatmap if insufficient data
@@ -240,7 +256,7 @@ async def income_statement(
     # Build annotation
     # Gross Profit Margin annotation explanation
     gross_profit_margin_metrics_text = f"<b>About Gross Profit Margin</b><br>"
-    gross_profit_margin_metrics_text += f"It's smart for investors to look at key financial metrics so they can make well-informed decisions about the companies they add to their portfolios. One important metric is the gross profit margin which you can calculate by subtracting the cost of goods sold from a company's revenue. Both figures are available on a company's income statement. A higher gross profit margin indicates a more profitable and efficient company. Comparing companies' margins within the same industry is essential, however, because this allows for a fair assessment due to similar operational variables.<br><br>"
+    gross_profit_margin_metrics_text += GROSS_PROFIT_MARGIN_BRIEF
     gross_profit_margin_metrics_text += f"<b>{prediction_year} Gross Profit Margin for {symbol}</b><br>"
     gross_profit_margin_metrics_text += f"<b>Predicted Gross Profit Margin</b>: {predicted_gross_profit_margin:.2f}%<br><br>"
     gross_profit_margin_metrics_text += f"<b>Predicted Components:</b><br>"
@@ -301,7 +317,7 @@ async def income_statement(
             gross_profit_margin_metrics_text += f"• Evaluate cost management and competitive positioning<br>"
     else:
         # No historical data available
-        if predicted_gross_profit_margin >= 30.0:
+        if predicted_gross_profit_margin >= 35.0:
             gross_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Strong</b><br>"
             gross_profit_margin_metrics_text += f"• Predicted margin ({predicted_gross_profit_margin:.2f}%) indicates strong profitability<br>"
         elif predicted_gross_profit_margin >= warning_threshold:
@@ -376,6 +392,15 @@ async def income_statement(
         annotation=dict(font=dict(color="red", size=12)),
         opacity=0.7
     )
+    fig.add_hline(
+        y=35.0,
+        line_dash="dash",
+        line_color="green",
+        annotation_text=f"Good Profit Margin ({35.0:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="green", size=12)),
+        opacity=0.7
+    )
 
     # Update layout
     fig.update_layout(
@@ -395,7 +420,7 @@ async def income_statement(
     # Build Net Profit Margin annotation
     # Net Profit Margin annotation explanation
     net_profit_margin_metrics_text = f"<b>About Net Profit Margin</b><br>"
-    net_profit_margin_metrics_text += f"The net profit margin indicates a business's profits as a percentage of total revenue. In addition to other measures, the net margin is a key indicator of a company's profitability and can be used to determine whether a business's strategy is working or whether changes to increase profitability are needed. For investors, a healthy and stable net profit margin is a positive sign of financial strength and operational efficiency.<br><br>"
+    net_profit_margin_metrics_text += NET_PROFIT_MARGIN_BRIEF
     net_profit_margin_metrics_text += f"<b>{prediction_year} Net Profit Margin for {symbol}</b><br>"
     net_profit_margin_metrics_text += f"<b>Predicted Net Profit Margin</b>: {predicted_net_profit_margin:.2f}%<br><br>"
     net_profit_margin_metrics_text += f"<b>Predicted Components:</b><br>"
@@ -432,17 +457,17 @@ async def income_statement(
     
     # Assess based on comparison with historical data
     if len(historical_npm_positive) > 0:
-        if predicted_net_profit_margin >= avg_historical_npm * 1.1:
+        if predicted_net_profit_margin >= 20.0:
             net_profit_margin_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
             net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) significantly exceeds historical average ({avg_historical_npm:.2f}%)<br>"
             net_profit_margin_metrics_text += f"• Company demonstrates strong profitability and financial strength<br>"
             net_profit_margin_metrics_text += f"• Indicates effective business strategy and operational efficiency<br>"
-        elif predicted_net_profit_margin >= avg_historical_npm * 0.9:
+        elif 10.0 <= predicted_net_profit_margin < 20.0:
             net_profit_margin_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
             net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) aligns with historical performance ({avg_historical_npm:.2f}%)<br>"
             net_profit_margin_metrics_text += f"• Company maintains healthy profitability levels<br>"
             net_profit_margin_metrics_text += f"• Stable financial strength and operational efficiency demonstrated<br>"
-        elif predicted_net_profit_margin >= warning_threshold_npm:
+        elif 5.0 <= predicted_net_profit_margin < 10.0:
             net_profit_margin_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
             net_profit_margin_metrics_text += f"• Predicted margin ({predicted_net_profit_margin:.2f}%) is below historical average ({avg_historical_npm:.2f}%)<br>"
             net_profit_margin_metrics_text += f"• Company can still maintain profitability but with reduced efficiency<br>"
@@ -527,6 +552,25 @@ async def income_statement(
         annotation=dict(font=dict(color="red", size=12)),
         opacity=0.7
     )
+    net_profit_margin_chart.add_hline(
+        y=10.0,
+        line_dash="dash",
+        line_color="blue",
+        annotation_text=f"Healthy ({10.0:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="blue", size=12)),
+        opacity=0.7
+    )
+
+    net_profit_margin_chart.add_hline(
+        y=20.0,
+        line_dash="dash",
+        line_color="green",
+        annotation_text=f"Strong Profit ({20.0:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="green", size=12)),
+        opacity=0.7
+    )
 
     # Update layout
     net_profit_margin_chart.update_layout(
@@ -546,7 +590,7 @@ async def income_statement(
     # Build Operating Profit Margin annotation
     # Operating Profit Margin annotation explanation
     operating_profit_margin_metrics_text = f"<b>About Operating Profit Margin</b><br>"
-    operating_profit_margin_metrics_text += f"Highly variable operating margins are a prime indicator of business risk. By the same token, looking at a company's past operating margins is a good way to gauge whether a company's performance has been getting better. The operating margin can improve through better management controls, more efficient use of resources, improved pricing, and more effective marketing.<br><br>"
+    operating_profit_margin_metrics_text += OPERATING_PROFIT_MARGIN_BRIEF
     operating_profit_margin_metrics_text += f"<b>{prediction_year} Operating Profit Margin for {symbol}</b><br>"
     operating_profit_margin_metrics_text += f"<b>Predicted Operating Profit Margin</b>: {predicted_operating_profit_margin:.2f}%<br><br>"
     operating_profit_margin_metrics_text += f"<b>Predicted Components:</b><br>"
@@ -666,19 +710,29 @@ async def income_statement(
 
     # Add warning threshold line (bottom line)
     operating_profit_margin_chart.add_hline(
-        y=warning_threshold_opm,
+        y=10.0,
         line_dash="dash",
         line_color="red",
-        annotation_text=f"Warning Level ({warning_threshold_opm:.2f}%)",
+        annotation_text=f"Warning Level ({10.0:.2f}%)",
         annotation_position="bottom right",
         annotation=dict(font=dict(color="red", size=12)),
+        opacity=0.7
+    )
+
+    operating_profit_margin_chart.add_hline(
+        y=20.0,
+        line_dash="dash",
+        line_color="blue",
+        annotation_text=f"Strong Profitability ({20.0:.2f}%)",
+        annotation_position="bottom right",
+        annotation=dict(font=dict(color="green", size=12)),
         opacity=0.7
     )
 
     # Update layout
     operating_profit_margin_chart.update_layout(
         title=f'LSTM Operating Profit Margin Indicator - '
-              f'Pre tax profit created on every VND revenue - {symbol}',
+              f"The net income derived from a company's primary or core business operations. - {symbol}",
         xaxis_title='Year',
         yaxis_title='Operating Profit Margin (%)',
         height=600,

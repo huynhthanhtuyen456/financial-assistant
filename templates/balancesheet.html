@@ -12,7 +12,7 @@
     <!-- Or for RTL support -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" />
 </head>
-<body>
+<div>
     <div class="container-fluid py-4">
         <!-- Header Section -->
         <div class="row mb-4">
@@ -43,10 +43,13 @@
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div id="plotly-graph">
-                            The correlation heatmap depicts relationships between financial metrics in balance sheet
-                            data. From the chart, the darker blue indicates stronger positive correlation, while the
-                            darker red indicates stronger negative correlation.
-                            The heatmap also highlights the strongest relationships between assets and liabilities, which are highly correlated.
+                            The core financial metrics such as assets, deposits, equity, and netCustomerLoan exhibit strong
+                            positive correlations (the dense blue block in the bottom right), indicating that these balance sheet
+                            items grow in lockstep as an institution scale. Conversely, risk-related features like badLoan and
+                            provision display sharp negative correlations (deep red stripes) against these growth metrics,
+                            reflecting how increasing credit risk mathematically reduces net asset values. While operational
+                            features like cash and inventory remain relatively independent with weaker correlations, the
+                            pervasive interdependence among the primary variables suggests significant data redundancy.
                         </div>
                     </div>
                 </div>
@@ -145,25 +148,25 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-8 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ rnn_quick_ratio_metrics_html | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ rnn_quick_ratio_annotation_text | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
+{#        <div class="row">#}
+{#            <div class="col-8 mb-4">#}
+{#                <div class="card shadow-sm">#}
+{#                    <div class="card-body">#}
+{#                        <div id="plotly-graph">#}
+{#                            {{ rnn_quick_ratio_metrics_html | safe }}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-4">#}
+{#                <div class="card shadow-sm">#}
+{#                    <div class="card-body">#}
+{#                        <div id="plotly-graph">#}
+{#                            {{ rnn_quick_ratio_annotation_text | safe }}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
         </div>
 
         <div class="row">
@@ -187,26 +190,26 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-8 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ rnn_debt_ratio_metrics_html | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ rnn_debt_ratio_annotation_text | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+{#        <div class="row">#}
+{#            <div class="col-8 mb-4">#}
+{#                <div class="card shadow-sm">#}
+{#                    <div class="card-body">#}
+{#                        <div id="plotly-graph">#}
+{#                            {{ rnn_debt_ratio_metrics_html | safe }}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#            <div class="col-4">#}
+{#                <div class="card shadow-sm">#}
+{#                    <div class="card-body">#}
+{#                        <div id="plotly-graph">#}
+{#                            {{ rnn_debt_ratio_annotation_text | safe }}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
     </div>
 
     <!-- Bootstrap 5 JS Bundle -->

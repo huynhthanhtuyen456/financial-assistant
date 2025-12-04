@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -7,139 +5,22 @@ from fastapi import APIRouter, Query, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sklearn.preprocessing import MinMaxScaler
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, GRU, LeakyReLU, BatchNormalization, SimpleRNN
-from tensorflow.keras.models import Sequential, load_model
 
+from core.helpers import (
+    create_sequences,
+    get_lstm_model,
+    get_symbols,
+    get_balance_sheet,
+    get_rnn_model,
+)
 from db import session_manager
-from models.balancesheet import BalanceSheet
-from models.stock import Stock
-
 
 router = APIRouter(
     prefix="/balance-sheet",
     tags=["balance-sheet-dashboard"]
 )
 templates = Jinja2Templates(directory="templates")
-
-
-def create_sequences(dataset, look_back_years):
-    x, y = [], []
-    for i in range(len(dataset) - look_back_years):
-        x.append(dataset[i:(i + look_back_years)])
-        y.append(dataset[i + look_back_years])
-    return np.array(x), np.array(y)
-
-
-async def get_balance_sheet(session: AsyncSession, symbol: str, year: int, yearly: bool = True):
-    # Get balance sheet data
-    stmt_bs = (select(BalanceSheet)
-               .where(BalanceSheet.yearly == True))
-    queryset_bs = await session.execute(stmt_bs)
-    balance_sheet_data = queryset_bs.fetchall()
-
-    if not balance_sheet_data:
-        raise HTTPException(status_code=404)
-
-    # Extract data
-    bs_data = []
-    for row in balance_sheet_data:
-        item = row[0].__dict__
-        bs_data.extend(item["balance_sheet"])
-
-    df_balance_sheet = pd.DataFrame(bs_data)
-    return df_balance_sheet
-
-
-async def get_symbols(session: AsyncSession):
-    # Get balance sheet data
-    stmt_st = select(Stock).order_by(Stock.symbol)
-    queryset_stock = await session.execute(stmt_st)
-    stock_data = queryset_stock.fetchall()
-
-    if not stock_data:
-        raise HTTPException(status_code=404)
-
-    # Extract data
-    stocks = []
-    for row in stock_data:
-        item = row[0].__dict__
-        stocks.append({"symbol": item["symbol"], "eng_name": item["eng_name"]})
-
-    return stocks
-
-
-def get_lstm_model(model_name, n_inputs, n_features, x_train, y_train, val_x, val_y):
-    if os.path.exists(model_name):
-        model = load_model(model_name)
-    else:
-        # Build and train model
-        model = Sequential([
-            Input(shape=(n_inputs, len(n_features))),
-            LSTM(120, activation='relu', return_sequences=True),
-            LeakyReLU(),
-            GRU(50, activation='relu', return_sequences=True),
-            Dropout(0.3),
-            BatchNormalization(),  # Batch Normalization layer
-            LSTM(120, activation='relu'),
-            LeakyReLU(),
-            Dropout(0.3),
-            Dense(len(n_features))
-        ])
-
-        model.compile(loss='mean_squared_error', optimizer='adam')
-
-        early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, mode='min')
-        mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=0, save_best_only=True)
-        model.fit(
-            x_train, y_train,
-            validation_data=(val_x, val_y),
-            epochs=100,
-            batch_size=16,
-            verbose=0,
-            callbacks=[early_stopping, mc]
-        )
-
-        # Save model
-        os.makedirs("models", exist_ok=True)
-        model.save(model_name)
-
-    return model
-
-
-def get_rnn_model(model_name, n_inputs, n_features, x_train, y_train, val_x, val_y):
-    if os.path.exists(model_name):
-        model = load_model(model_name)
-    else:
-        # Build and train model
-        model = Sequential([
-            Input(shape=(n_inputs, len(n_features))),
-            SimpleRNN(120, activation='relu', return_sequences=True),
-            SimpleRNN(120, return_sequences=False),
-            Dense(len(n_features))
-        ])
-
-        model.compile(loss='mean_squared_error', optimizer='adam')
-
-        early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, mode='min')
-        mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=0, save_best_only=True)
-        model.fit(
-            x_train, y_train,
-            validation_data=(val_x, val_y),
-            epochs=100,
-            batch_size=16,
-            verbose=0,
-            callbacks=[early_stopping, mc]
-        )
-
-        # Save model
-        os.makedirs("models", exist_ok=True)
-        model.save(model_name)
-
-    return model
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -353,7 +234,7 @@ async def balance_sheet(
             val_y.append(y_val)
 
     # Check if model exists, otherwise train new one
-    current_ratio_model_path = f"models/current_ratio_{symbol}.keras"
+    current_ratio_model_path = f"trained_models/current_ratio_{symbol}.keras"
     current_ratio_model = get_lstm_model(
         current_ratio_model_path,
         len(df_balance_sheet),
@@ -488,7 +369,7 @@ async def balance_sheet(
 
     # RNN model
     # Check if model exists, otherwise train new one
-    rnn_current_ratio_model_path = f"models/rnn_current_ratio_{symbol}.keras"
+    rnn_current_ratio_model_path = f"trained_models/rnn_current_ratio_{symbol}.keras"
     rnn_current_ratio_model = get_rnn_model(
         rnn_current_ratio_model_path,
         len(df_balance_sheet),
@@ -603,9 +484,9 @@ async def balance_sheet(
 
     # Add reference lines
     rnn_fig.add_hline(y=1.0, line_dash="dash", line_color="red",
-                  annotation_text="Warning Level (1.0)", annotation_position="top")
+                  annotation_text="Danger Zone (1.0)", annotation_position="top")
     rnn_fig.add_hline(y=1.5, line_dash="dash", line_color="green",
-                  annotation_text="Healthy Level (1.5)", annotation_position="top")
+                  annotation_text="Very Safe (1.5)", annotation_position="top")
 
     # Update layout
     rnn_fig.update_layout(
@@ -668,7 +549,7 @@ async def balance_sheet(
                 quick_val_y.append(quick_y_val)
         
         # LSTM model for quick ratio
-        quick_ratio_model_path = f"models/quick_ratio_{symbol}.keras"
+        quick_ratio_model_path = f"trained_models/quick_ratio_{symbol}.keras"
         quick_ratio_model = get_lstm_model(
             quick_ratio_model_path,
             len(df_balance_sheet),
@@ -781,10 +662,10 @@ async def balance_sheet(
             )
         
         # Add reference lines
-        quick_fig.add_hline(y=0.5, line_dash="dash", line_color="red",
-                          annotation_text="Warning Level (0.5)", annotation_position="top")
-        quick_fig.add_hline(y=1.0, line_dash="dash", line_color="green",
-                          annotation_text="Healthy Level (1.0)", annotation_position="top")
+        quick_fig.add_hline(y=1.0, line_dash="dash", line_color="red",
+                          annotation_text="Danger Zone (1.0)", annotation_position="top")
+        quick_fig.add_hline(y=1.5, line_dash="dash", line_color="green",
+                          annotation_text="Very Safe (1.5)", annotation_position="top")
         
         # Update layout
         quick_fig.update_layout(
@@ -801,7 +682,7 @@ async def balance_sheet(
         quick_ratio_metrics_html = quick_fig.to_html(full_html=False, include_plotlyjs='cdn')
         
         # RNN model for quick ratio
-        rnn_quick_ratio_model_path = f"models/rnn_quick_ratio_{symbol}.keras"
+        rnn_quick_ratio_model_path = f"trained_models/rnn_quick_ratio_{symbol}.keras"
         rnn_quick_ratio_model = get_rnn_model(
             rnn_quick_ratio_model_path,
             len(df_balance_sheet),
@@ -975,7 +856,7 @@ async def balance_sheet(
                 debt_val_y.append(debt_y_val)
         
         # LSTM model for debt ratio
-        debt_ratio_model_path = f"models/debt_ratio_{symbol}.keras"
+        debt_ratio_model_path = f"trained_models/debt_ratio_{symbol}.keras"
         debt_ratio_model = get_lstm_model(
             debt_ratio_model_path,
             len(df_balance_sheet),
@@ -1088,12 +969,12 @@ async def balance_sheet(
             )
         
         # Add reference lines
-        # debt_fig.add_hline(y=0.5, line_dash="dash", line_color="green",
-        #                   annotation_text="Good Level (0.5)", annotation_position="top")
-        # debt_fig.add_hline(y=0.7, line_dash="dash", line_color="orange",
-        #                   annotation_text="Moderate Level (0.7)", annotation_position="top")
-        # debt_fig.add_hline(y=1.0, line_dash="dash", line_color="red",
-        #                   annotation_text="High Risk Level (1.0)", annotation_position="top")
+        debt_fig.add_hline(y=1.0, line_dash="dash", line_color="green",
+                          annotation_text="Relative Safe (1.0)", annotation_position="bottom")
+        debt_fig.add_hline(y=2.0, line_dash="dash", line_color="orange",
+                          annotation_text="Risky (2.0)", annotation_position="top")
+        debt_fig.add_hline(y=5.0, line_dash="dash", line_color="red",
+                          annotation_text="Extremely Dangerous (5.0)", annotation_position="top")
         
         # Update layout
         debt_fig.update_layout(
@@ -1110,7 +991,7 @@ async def balance_sheet(
         debt_ratio_metrics_html = debt_fig.to_html(full_html=False, include_plotlyjs='cdn')
         
         # RNN model for debt ratio
-        rnn_debt_ratio_model_path = f"models/rnn_debt_ratio_{symbol}.keras"
+        rnn_debt_ratio_model_path = f"trained_models/rnn_debt_ratio_{symbol}.keras"
         rnn_debt_ratio_model = get_rnn_model(
             rnn_debt_ratio_model_path,
             len(df_balance_sheet),

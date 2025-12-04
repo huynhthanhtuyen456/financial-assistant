@@ -16,6 +16,14 @@ router = APIRouter(
     tags=["income-statement-dashboard"]
 )
 templates = Jinja2Templates(directory="templates")
+FREE_CASH_FLOW_TO_EQUITY_BRIEF = """
+FCFE represents cash remaining for equity holders after all operational and debt obligations. 
+High FCFE suggests strong financial health and the capacity to reward shareholders without 
+relying on external financing.<br><br>
+"""
+FREE_CASH_FLOW_BRIEF = """
+Free Cash Flow (FCF) indicates a company's capacity to handle debt and reward shareholders.<br><br>
+"""
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -220,7 +228,7 @@ async def cashflow_dashboard(
     # Build annotation
     # FCFE (Free Cash Flow to Equity) annotation explanation
     fcfe_metrics_text = f"<b>About Free Cash Flow to Equity (FCFE)</b><br>"
-    fcfe_metrics_text += f"Free cash flow to equity is a crucial financial metric that reveals the cash available to a company's equity shareholders after accounting for expenses, reinvestments, and debt repayments. FCFE serves as a vital indicator of a company's ability to self-fund dividends and share repurchases without relying on external financing. For investors, a high FCFE suggests sound financial health and efficient equity capital utilization, offering valuable insights for evaluating companies, especially those not issuing dividends.<br><br>"
+    fcfe_metrics_text += FREE_CASH_FLOW_TO_EQUITY_BRIEF
     fcfe_metrics_text += f"<b>{prediction_year} Current FCFE for {symbol}</b><br>"
     fcfe_metrics_text += f"<b>Predicted FCFE</b>: {predicted_fcfe:.2f}<br><br>"
     fcfe_metrics_text += f"<b>Predicted Components:</b><br>"
@@ -350,7 +358,7 @@ async def cashflow_dashboard(
     # Build FCF annotation
     # FCF (Free Cash Flow) annotation explanation
     fcf_metrics_text = f"<b>About Free Cash Flow (FCF)</b><br>"
-    fcf_metrics_text += f"Checking a company's free cash flow (FCF), and especially checking the trend of free cash flow over time, can be useful to investors considering a company's stock. Shareholders can use FCF as a gauge of the company's ability to pay dividends or interest, while lenders may use it as a measure of a company's ability to take on additional debt. Free cash flow isn't listed on a company's financial statements and must be manually calculated from other data. Many financial websites provide a summary of FCF or a graph of FCF's trend for publicly traded companies.<br><br>"
+    fcf_metrics_text += FREE_CASH_FLOW_BRIEF
     fcf_metrics_text += f"<b>{prediction_year} Free Cash Flow for {symbol}</b><br>"
     fcf_metrics_text += f"<b>Predicted FCF</b>: {predicted_fcf:,.2f}B VND<br><br>"
     

@@ -1,26 +1,46 @@
-Thống kê theo industry
-Thống kê mức độ cổ tức, bao nhiêu công ty chia theo quý theo năm.
-Cty theo quý, Cty theo năm
+Financial Assistant
+===================
 
-Week 29/08/2025
+A comprehensive financial analysis and prediction project for Vietnamese stock market data.
 
-Arima sarima for stock price prediction
-LSTM for stock price prediction
-GARCH for stock price prediction
-Prophet for stock price prediction
-XGBoost for stock price prediction
-RandomForest for stock price prediction
-LightGBM for stock price prediction
-CatBoost for stock price prediction
+Features
+--------
 
-EDA cho dữ liệu cổ tức
-- Thống kê số lần trả cổ tức của các công ty
-- Thống kê số công ty trả cổ tức theo năm
-- Thống kê số công ty trả cổ tức theo quý
-- Top 10 công ty trả cổ tức thường xuyên nhất theo năm (trung bình số lần/năm)
-- Top 10 công ty trả cổ tức thường xuyên nhất theo quý (trung bình số lần/quý)
+Stock Price Prediction
+~~~~~~~~~~~~~~~~~~~~~~
 
-Phần tình hình tài chính thì em làm phân tích trc nha
-Ví dụ các chỉ số có ổn định ko, tăng giảm thế nào, trend như thế nào
-V em làm phần phân tích tài chính trc
-Ra insight r tính tiếp cho phần dự đoán cổ phiếu
+Multiple machine learning models for stock price forecasting:
+
+- RNN
+- LSTM (Long Short-Term Memory)
+- Random Forest
+- Multiple Linear Regression
+
+Financial Analysis
+~~~~~~~~~~~~~~~~~~
+
+- Financial indicator stability analysis
+- Trend identification and analysis
+- Year-over-year and quarter-over-quarter comparisons
+
+Installation
+------------
+
+.. code-block:: bash
+
+    pip install -r requirements.txt
+
+Usage
+-----
+
+See project documentation for detailed usage instructions.
+
+Timeline
+--------
+
+Week of 29/08/2025: Implementation of prediction models and dividend analysis
+
+License
+-------
+
+Add your license information here.

@@ -58,10 +58,11 @@ async def get_balance_sheet(
         }
 
     keys = ['cash', 'asset', 'debt', 'equity', 'payable', 'shortAsset',
-            'shortDebt', 'longAsset', 'longDebt', 'inventory', 'shortReceivable', 'otherDebt']
+            'shortDebt', 'longAsset', 'longDebt', 'inventory', 'shortReceivable', 'otherDebt', 'payableInterest']
     financial_data = {}
     for row in balance_sheet:
         item = row[0].__dict__
+        print(f"{row[0].__dict__}")
 
         for row in item["balance_sheet"]:
             dict_key = row["year"]
@@ -266,7 +267,18 @@ async def get_income_statement(
             "status": False
         }
 
-    keys = ['revenue', 'preTaxProfit', 'postTaxProfit', 'grossProfit', 'investProfit', 'operationIncome']
+    keys = [
+        'revenue',
+        'preTaxProfit',
+        'postTaxProfit',
+        'grossProfit',
+        'investProfit',
+        'operationIncome',
+        'operationExpense',
+        'interestExpense',
+        'provisionExpense',
+        'costOfGoodSold',
+    ]
     financial_data = {}
     for row in income_statement:
         item = row[0].__dict__

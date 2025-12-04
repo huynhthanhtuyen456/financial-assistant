@@ -43,10 +43,11 @@
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div id="plotly-graph">
-                            The correlation heatmap depicts relationships between financial metrics in balance sheet
-                            data. From the chart, the darker blue indicates stronger positive correlation, while the
-                            darker red indicates stronger negative correlation.
-                            The heatmap also highlights the strongest relationships between assets and liabilities, which are highly correlated.
+                            The heatmap indicates a fragmented correlation structure with a near-zero mean.
+                            Strong negative correlations between revenue and expenses appear to be artifacts of negative sign encoding.
+                            While profit metrics exhibit near-perfect multicollinearity, "Growth" features are uncorrelated with absolute size.
+                            Consequently, predictive models should normalize expense signs and treat "Momentum" and "Magnitude" as distinct,
+                            independent feature sets.
                         </div>
                     </div>
                 </div>

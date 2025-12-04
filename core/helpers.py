@@ -1,18 +1,19 @@
 import os
 
+import math
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, GRU, LeakyReLU, BatchNormalization, SimpleRNN
 from tensorflow.keras.models import Sequential, load_model
 
 from models.balancesheet import BalanceSheet
+from models.cashflow import Cashflow
 from models.income_statement import IncomeStatement
 from models.stock import Stock
-from models.cashflow import Cashflow
 
 
 def create_sequences(dataset, look_back_years):
@@ -30,28 +31,29 @@ def get_lstm_model(model_name, n_inputs, n_features, x_train, y_train, val_x, va
         # Build and train model
         model = Sequential([
             Input(shape=(n_inputs, len(n_features))),
-            LSTM(120, activation='relu', return_sequences=True),
+            LSTM(64, activation='relu', return_sequences=True),
             LeakyReLU(),
             GRU(50, activation='relu', return_sequences=True),
-            Dropout(0.3),
+            Dropout(0.5),
             BatchNormalization(),  # Batch Normalization layer
-            LSTM(120, activation='relu'),
+            LSTM(32, activation='relu'),
             LeakyReLU(),
-            Dropout(0.3),
+            Dropout(0.5),
             Dense(len(n_features))
         ])
 
         model.compile(loss='mean_squared_error', optimizer='adam')
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, mode='min')
-        mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=0, save_best_only=True)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=100, restore_best_weights=True)
+        mc = ModelCheckpoint(model_name, monitor='val_accuracy', mode='max', save_best_only=True)
+        reduce = ReduceLROnPlateau(patience=100, factor=0.5)
         model.fit(
             x_train, y_train,
             validation_data=(val_x, val_y),
-            epochs=100,
-            batch_size=16,
+            epochs=int(math.ceil(n_inputs / len(n_features))),
+            batch_size=32,
             verbose=0,
-            callbacks=[early_stopping, mc]
+            callbacks=[early_stopping, mc, reduce]
         )
 
         # Save model

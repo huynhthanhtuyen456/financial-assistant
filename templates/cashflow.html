@@ -43,10 +43,12 @@
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div id="plotly-graph">
-                            The correlation heatmap depicts relationships between financial metrics in balance sheet
-                            data. From the chart, the darker blue indicates stronger positive correlation, while the
-                            darker red indicates stronger negative correlation.
-                            The heatmap also highlights the strongest relationships between assets and liabilities, which are highly correlated.
+                            Despite low overall connectivity (mean -0.060), the heatmap identifies distinct relationships
+                            between investment and financing. investCost and fromInvest scale proportionally (+0.691),
+                            while fromFinancial correlates negatively with both, reflecting the inverse trade-off between
+                            capex and financing. Conversely, freeCashFlow shows weak associations and fromSale is statistically independent.
+                            This implies multicollinearity within investment/financing features,
+                            while sales and FCF appear driven by uncaptured external factors.
                         </div>
                     </div>
                 </div>
