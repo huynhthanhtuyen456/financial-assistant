@@ -313,3 +313,78 @@ def train_and_predict_ratio_random_forest(
     fig_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
 
     return fig_html
+
+
+def train_and_predict_ratio_linear_regression(df, symbol, target_col, prediction_year, title_suffix):
+    """
+    Trains a Linear Regression model using 'Year' as the feature to project a trend line.
+    Returns the Plotly HTML.
+    """
+    # Filter and prepare data
+    df_symbol = df[df['ticker'] == symbol].sort_values('year').copy()
+    df_symbol = df_symbol.dropna(subset=[target_col]).reset_index(drop=True)
+
+    if len(df_symbol) < 2:
+        return "<div>Insufficient data for Linear Regression</div>"
+
+    # We use YEAR as the feature for forecasting the trend
+    X = df_symbol[['year']].values
+    y = df_symbol[target_col].values
+
+    # Train Model
+    lr = LinearRegression()
+    lr.fit(X, y)
+
+    # Predict History (for the trend line)
+    y_trend = lr.predict(X)
+
+    # Predict Future
+    future_X = np.array([[prediction_year]])
+    future_pred = lr.predict(future_X)[0]
+
+    # Calculate Assessment (generic logic based on ratio direction)
+    slope = lr.coef_[0]
+    trend_desc = "Increasing" if slope > 0 else "Decreasing"
+
+    # Create Visualization
+    fig = go.Figure()
+
+    # 1. Historical Actuals
+    fig.add_trace(go.Scatter(
+        x=df_symbol['year'],
+        y=y,
+        mode='markers',
+        name='Actual History',
+        marker=dict(color='blue', size=8)
+    ))
+
+    # 2. Linear Trend Line
+    fig.add_trace(go.Scatter(
+        x=df_symbol['year'],
+        y=y_trend,
+        mode='lines',
+        name='Linear Trend',
+        line=dict(color='orange', width=2, dash='dash')
+    ))
+
+    # 3. Future Prediction
+    fig.add_trace(go.Scatter(
+        x=[prediction_year],
+        y=[future_pred],
+        mode='markers+text',
+        name=f'LR Prediction {prediction_year}',
+        marker=dict(color='red', size=12, symbol='star'),
+        text=[f'{future_pred:.2f}'],
+        textposition="top center"
+    ))
+
+    fig.update_layout(
+        title=f"Linear Regression Trend - {title_suffix} ({trend_desc})",
+        xaxis_title="Year",
+        yaxis_title=target_col,
+        height=500,
+        template='plotly_white',
+        hovermode='x unified'
+    )
+
+    return fig.to_html(full_html=False, include_plotlyjs='cdn')

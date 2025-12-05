@@ -14,7 +14,7 @@ from core.helpers import (
     get_lstm_model,
     get_symbols,
     get_balance_sheet,
-    get_rnn_model, train_and_predict_ratio_random_forest,
+    get_rnn_model, train_and_predict_ratio_random_forest, train_and_predict_ratio_linear_regression,
 )
 from db import session_manager
 
@@ -1134,9 +1134,6 @@ async def balance_sheet(
     """
     Random Forest
     """
-    """
-    Random Forest
-    """
     fig_rf_html = train_and_predict_ratio_random_forest(
         df_balance_sheet,
         symbol,
@@ -1222,8 +1219,23 @@ async def balance_sheet(
     """
     End Random Forest
     """
+
     """
-    End Random Forest
+        Linear Regression Predictions
+        """
+    lr_current_ratio_html = train_and_predict_ratio_linear_regression(
+        df_balance_sheet, symbol, "currentRatio", prediction_year, "Current Ratio"
+    )
+
+    lr_quick_ratio_html = train_and_predict_ratio_linear_regression(
+        df_balance_sheet, symbol, "quickRatio", prediction_year, "Quick Ratio"
+    )
+
+    lr_debt_ratio_html = train_and_predict_ratio_linear_regression(
+        df_balance_sheet, symbol, "debtRatio", prediction_year, "Debt Ratio"
+    )
+    """
+    End Linear Regression
     """
 
     symbols = await get_symbols(session)
@@ -1250,6 +1262,10 @@ async def balance_sheet(
         "symbols": symbols,
         "symbol": symbol,
         "model_type": model_type,
+        # Linear Regression
+        "lr_current_ratio_html": lr_current_ratio_html,
+        "lr_quick_ratio_html": lr_quick_ratio_html,
+        "lr_debt_ratio_html": lr_debt_ratio_html,
     }
 
     return templates.TemplateResponse("balancesheet.html", context=context)

@@ -7,7 +7,8 @@ from fastapi.templating import Jinja2Templates
 from sklearn.preprocessing import MinMaxScaler
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.helpers import get_lstm_model, get_rnn_model, get_cash_flow, get_symbols, create_sequences, get_balance_sheet
+from core.helpers import get_lstm_model, get_rnn_model, get_cash_flow, get_symbols, create_sequences, get_balance_sheet, \
+    train_and_predict_ratio_linear_regression, train_and_predict_ratio_random_forest
 from db import session_manager
 
 
@@ -31,8 +32,8 @@ async def cashflow_dashboard(
         request: Request, session: AsyncSession = Depends(session_manager.session),
         symbol: str = Query('FPT', description="Stock symbol"),
         prediction_year: int = Query(2023, description="Year to predict"),
+        model_type: str = Query('LSTM', description="Model to use for prediction"),
         yearly: bool = Query(True, description="Use yearly data"),
-        feature_cols_query: list[str] = Query(["asset"], description="Feature columns to query"),
 ):
     """
     Generate heatmap chart showing correlation matrix between balance sheet features
@@ -72,9 +73,6 @@ async def cashflow_dashboard(
 
     # Gross Profit Margin
     df_cashflow["fcfe"] = df_cashflow["fromSale"] - df_cashflow["investCost"] + df_cashflow["equity"]
-
-    # Process each company separately and calculate correlations
-    symbols = df_cashflow['ticker'].unique()
 
     # Calculate correlation matrix for all balance sheet features
     # Filter out non-numeric columns and ensure feature columns exist
@@ -488,6 +486,192 @@ async def cashflow_dashboard(
     # Convert plot to HTML
     fcf_metrics_html = fcf_chart.to_html(full_html=False, include_plotlyjs='cdn')
 
+    """
+    Linear Regression Predictions
+    """
+    lr_fcf_html = train_and_predict_ratio_linear_regression(
+        df_cashflow, symbol, "freeCashFlow", prediction_year, "Free Cash Flow"
+    )
+
+    lr_fcfe_html = train_and_predict_ratio_linear_regression(
+        df_cashflow, symbol, "fcfe", prediction_year, "Free Cash Flow to Equity"
+    )
+    """
+    End Linear Regression
+    """
+
+    """
+    Random Forest
+    """
+    fig_fcf_html = train_and_predict_ratio_random_forest(
+        df_cashflow,
+        symbol,
+        target_col="freeCashFlow",
+        prediction_year=2023,
+        features=["freeCashFlow"],
+    )
+    fig_fcfe_html = train_and_predict_ratio_random_forest(
+        df_cashflow,
+        symbol,
+        target_col="fcfe",
+        prediction_year=2023,
+        features=["fcfe", "fromSale", "investCost", "equity"],
+    )
+    """
+    End Random Forest
+    """
+
+    """RNN Prediction"""
+    """
+        RNN Prediction
+        """
+    rnn_model_path = f"models/rnn_cashflow_{symbol}.keras"
+    rnn_model = get_rnn_model(
+        rnn_model_path,
+        len(df_cashflow),
+        predicted_features,
+        x_train=x_train,
+        y_train=y_train,
+        val_x=val_x,
+        val_y=val_y,
+    )
+
+    # Make RNN prediction
+    last_sequence_rnn = scaled_data_before_prediction[-look_back:].copy()
+    rnn_future_predictions = []
+
+    for _ in range(num_years_to_predict):
+        pred_input_rnn = last_sequence_rnn.reshape(1, look_back, len(predicted_features))
+        pred_rnn = rnn_model.predict(pred_input_rnn, verbose=0)
+        rnn_future_predictions.append(pred_rnn[0])
+        last_sequence_rnn = np.vstack([last_sequence_rnn[1:], pred_rnn[0]])
+
+    # Inverse transform predictions
+    rnn_future_predictions = scaler.inverse_transform(np.array(rnn_future_predictions))
+
+    # Calculate RNN predicted values
+    rnn_predicted_values = rnn_future_predictions[-1]
+    rnn_predicted_from_sale, rnn_predicted_invest_cost = rnn_predicted_values[0], rnn_predicted_values[1]
+    rnn_predicted_fcf, rnn_predicted_equity = rnn_predicted_values[2], rnn_predicted_values[3]
+
+    rnn_predicted_fcfe = rnn_predicted_from_sale - rnn_predicted_invest_cost + rnn_predicted_equity
+
+    # --- RNN FCFE Text Generation ---
+    rnn_fcfe_metrics_text = f"<b>About Free Cash Flow to Equity (FCFE)</b><br>"
+    rnn_fcfe_metrics_text += FREE_CASH_FLOW_TO_EQUITY_BRIEF
+    rnn_fcfe_metrics_text += f"<b>{prediction_year} Current FCFE for {symbol}</b><br>"
+    rnn_fcfe_metrics_text += f"<b>Predicted FCFE</b>: {rnn_predicted_fcfe:.2f}<br><br>"
+    rnn_fcfe_metrics_text += f"<b>Predicted Components:</b><br>"
+    rnn_fcfe_metrics_text += f"• Predicted Cash From Sale: {rnn_predicted_from_sale:,.2f}B VND<br>"
+    rnn_fcfe_metrics_text += f"• Predicted Invest Cost: {rnn_predicted_invest_cost:,.2f}B VND<br><br>"
+    rnn_fcfe_metrics_text += f"• Predicted Equity: {rnn_predicted_equity:,.2f}B VND<br><br>"
+
+    if actual_prediction_mask.any():
+        actual_fcfe = df_symbol[actual_prediction_mask]['fcfe'].values[0]
+        difference_rnn = rnn_predicted_fcfe - actual_fcfe
+        percentage_diff_rnn = (difference_rnn / actual_fcfe) * 100 if actual_fcfe != 0 else 0
+
+        rnn_fcfe_metrics_text += f"<b>Comparison with Actual {prediction_year}:</b><br>"
+        rnn_fcfe_metrics_text += f"• Actual {prediction_year}: {actual_fcfe:.2f}<br>"
+        rnn_fcfe_metrics_text += f"• Difference: {difference_rnn:.2f} ({percentage_diff_rnn:+.2f}%)<br><br>"
+
+    rnn_fcfe_metrics_text += f"<b>FCFE Financial Health Assessment:</b><br>"
+    if rnn_predicted_fcfe > 0:
+        if len(historical_fcfe_positive) > 0:
+            if rnn_predicted_fcfe >= avg_historical_fcfe * 1.2:
+                rnn_fcfe_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+                rnn_fcfe_metrics_text += f"• Predicted FCFE ({rnn_predicted_fcfe:,.2f}B VND) significantly exceeds historical average<br>"
+            elif rnn_predicted_fcfe >= avg_historical_fcfe * 0.8:
+                rnn_fcfe_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+                rnn_fcfe_metrics_text += f"• Predicted FCFE ({rnn_predicted_fcfe:,.2f}B VND) aligns with historical performance<br>"
+            else:
+                rnn_fcfe_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+                rnn_fcfe_metrics_text += f"• Predicted FCFE ({rnn_predicted_fcfe:,.2f}B VND) is below historical average<br>"
+        else:
+            rnn_fcfe_metrics_text += f"• Expected Status: <b style='color:blue'>Positive Turnaround</b><br>"
+            rnn_fcfe_metrics_text += f"• Predicted FCFE ({rnn_predicted_fcfe:,.2f}B VND) is positive<br>"
+    else:
+        if len(historical_fcfe_positive) > 0:
+            rnn_fcfe_metrics_text += f"• Expected Status: <b style='color:red'>Concerning</b><br>"
+            rnn_fcfe_metrics_text += f"• Predicted FCFE ({rnn_predicted_fcfe:,.2f}B VND) is negative<br>"
+        else:
+            rnn_fcfe_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            rnn_fcfe_metrics_text += f"• Predicted FCFE ({rnn_predicted_fcfe:,.2f}B VND) is negative<br>"
+
+    # --- RNN FCFE Chart ---
+    rnn_fcfe_fig = go.Figure()
+    rnn_fcfe_fig.add_trace(go.Scatter(x=df_symbol['year'], y=df_symbol['fcfe'], mode='lines+markers', name='Historical',
+                                      line=dict(color='blue', width=2), marker=dict(size=8),
+                                      hovertemplate='Year: %{x}<br>Current FCFE: %{y:.2f}<extra></extra>'))
+    rnn_fcfe_fig.add_trace(go.Scatter(x=[prediction_year], y=[rnn_predicted_fcfe], mode='markers', name='Prediction',
+                                      marker=dict(color='red', size=12, symbol='square'),
+                                      hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}<extra></extra>'))
+    if actual_prediction_mask.any():
+        rnn_fcfe_fig.add_trace(
+            go.Scatter(x=[prediction_year], y=[actual_fcfe], mode='markers', name=f'Actual {prediction_year}',
+                       marker=dict(color='green', size=14, symbol='diamond'),
+                       hovertemplate='Year: %{x}<br>Actual: %{y:.2f}<extra></extra>'))
+    rnn_fcfe_fig.update_layout(title=f'RNN Free Cash Flow to Equity Indicator - {symbol}', xaxis_title='Year',
+                               yaxis_title='Current FCFE', height=600, showlegend=True, hovermode='x unified',
+                               template='plotly_white')
+    rnn_fcfe_metrics_html = rnn_fcfe_fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # --- RNN FCF Text Generation ---
+    rnn_fcf_metrics_text = f"<b>About Free Cash Flow (FCF)</b><br>"
+    rnn_fcf_metrics_text += FREE_CASH_FLOW_BRIEF
+    rnn_fcf_metrics_text += f"<b>{prediction_year} Free Cash Flow for {symbol}</b><br>"
+    rnn_fcf_metrics_text += f"<b>Predicted FCF</b>: {rnn_predicted_fcf:,.2f}B VND<br><br>"
+
+    if actual_fcf is not None:
+        difference_rnn_fcf = rnn_predicted_fcf - actual_fcf
+        percentage_diff_rnn_fcf = (difference_rnn_fcf / actual_fcf) * 100 if actual_fcf != 0 else 0
+        rnn_fcf_metrics_text += f"<b>Comparison with Actual {prediction_year}:</b><br>"
+        rnn_fcf_metrics_text += f"• Actual {prediction_year}: {actual_fcf:,.2f}B VND<br>"
+        rnn_fcf_metrics_text += f"• Difference: {difference_rnn_fcf:,.2f}B VND ({percentage_diff_rnn_fcf:+.2f}%)<br><br>"
+
+    rnn_fcf_metrics_text += f"<b>FCF Financial Health Assessment:</b><br>"
+    if rnn_predicted_fcf > 0:
+        if len(historical_fcf_positive) > 0:
+            if rnn_predicted_fcf >= avg_historical_fcf * 1.2:
+                rnn_fcf_metrics_text += f"• Expected Status: <b style='color:green'>Excellent</b><br>"
+                rnn_fcf_metrics_text += f"• Predicted FCF ({rnn_predicted_fcf:,.2f}B VND) significantly exceeds historical average<br>"
+            elif rnn_predicted_fcf >= avg_historical_fcf * 0.8:
+                rnn_fcf_metrics_text += f"• Expected Status: <b style='color:blue'>Good</b><br>"
+                rnn_fcf_metrics_text += f"• Predicted FCF ({rnn_predicted_fcf:,.2f}B VND) aligns with historical performance<br>"
+            else:
+                rnn_fcf_metrics_text += f"• Expected Status: <b style='color:orange'>Moderate</b><br>"
+                rnn_fcf_metrics_text += f"• Predicted FCF ({rnn_predicted_fcf:,.2f}B VND) is below historical average<br>"
+        else:
+            rnn_fcf_metrics_text += f"• Expected Status: <b style='color:blue'>Positive Turnaround</b><br>"
+            rnn_fcf_metrics_text += f"• Predicted FCF ({rnn_predicted_fcf:,.2f}B VND) is positive<br>"
+    else:
+        if len(historical_fcf_positive) > 0:
+            rnn_fcf_metrics_text += f"• Expected Status: <b style='color:red'>Concerning</b><br>"
+            rnn_fcf_metrics_text += f"• Predicted FCF ({rnn_predicted_fcf:,.2f}B VND) is negative<br>"
+        else:
+            rnn_fcf_metrics_text += f"• Expected Status: <b style='color:red'>Warning</b><br>"
+            rnn_fcf_metrics_text += f"• Predicted FCF ({rnn_predicted_fcf:,.2f}B VND) is negative<br>"
+
+    # --- RNN FCF Chart ---
+    rnn_fcf_chart = go.Figure()
+    rnn_fcf_chart.add_trace(
+        go.Scatter(x=df_symbol['year'], y=df_symbol['freeCashFlow'], mode='lines+markers', name='Historical',
+                   line=dict(color='blue', width=2), marker=dict(size=8),
+                   hovertemplate='Year: %{x}<br>Current FCF: %{y:.2f}<extra></extra>'))
+    rnn_fcf_chart.add_trace(go.Scatter(x=[prediction_year], y=[rnn_predicted_fcf], mode='markers', name='Prediction',
+                                       marker=dict(color='red', size=12, symbol='square'),
+                                       hovertemplate='Year: %{x}<br>Predicted: %{y:.2f}<extra></extra>'))
+    if actual_fcf is not None:
+        rnn_fcf_chart.add_trace(
+            go.Scatter(x=[prediction_year], y=[actual_fcf], mode='markers', name=f'Actual {prediction_year}',
+                       marker=dict(color='green', size=14, symbol='diamond'),
+                       hovertemplate='Year: %{x}<br>Actual: %{y:.2f}<extra></extra>'))
+    rnn_fcf_chart.update_layout(title=f'RNN Free Cash Flow Indicator - {symbol}', xaxis_title='Year',
+                                yaxis_title='Current Free Cash Flow', height=600, showlegend=True,
+                                hovermode='x unified', template='plotly_white')
+    rnn_fcf_metrics_html = rnn_fcf_chart.to_html(full_html=False, include_plotlyjs='cdn')
+    """End RNN Prediction"""
+
     symbols = await get_symbols(session)
     context = {
         "request": request,
@@ -499,6 +683,18 @@ async def cashflow_dashboard(
         "summary": summary,
         "symbols": symbols,
         "symbol": symbol,
+        "model_type": model_type,
+        # Linear Regression
+        "lr_fcf_html": lr_fcf_html,
+        "lr_fcfe_html": lr_fcfe_html,
+        # Random Forest
+        "fig_fcf_html": fig_fcf_html,
+        "fig_fcfe_html": fig_fcfe_html,
+        # RNN
+        "rnn_fcfe_metrics_html": rnn_fcfe_metrics_html,
+        "rnn_fcfe_metrics_text": rnn_fcfe_metrics_text,
+        "rnn_fcf_metrics_html": rnn_fcf_metrics_html,
+        "rnn_fcf_metrics_text": rnn_fcf_metrics_text,
     }
 
     return templates.TemplateResponse("cashflow.html", context=context)

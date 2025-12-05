@@ -62,6 +62,27 @@
                                         {% endfor %}
                                     </select>
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Select Model:</label>
+                                    <div class="d-flex">
+                                        <div class="form-check me-3">
+                                            <input class="form-check-input" type="radio" name="model_type" id="lstm_model" value="LSTM" {% if model_type == 'LSTM' or model_type is not defined %}checked{% endif %}>
+                                            <label class="form-check-label" for="lstm_model">LSTM</label>
+                                        </div>
+                                        <div class="form-check me-3">
+                                            <input class="form-check-input" type="radio" name="model_type" id="rnn_model" value="RNN" {% if model_type == 'RNN' %}checked{% endif %}>
+                                            <label class="form-check-label" for="rnn_model">RNN</label>
+                                        </div>
+                                        <div class="form-check me-3">
+                                            <input class="form-check-input" type="radio" name="model_type" id="rf_model" value="Random Forest" {% if model_type == 'Random Forest' %}checked{% endif %}>
+                                            <label class="form-check-label" for="rf_model">Random Forest</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="model_type" id="lr_model" value="Multiple Linear Regression" {% if model_type == 'Multiple Linear Regression' %}checked{% endif %}>
+                                            <label class="form-check-label" for="rf_model">Multiple Linear Regression</label>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     <button type="submit" class="btn btn-primary w-100">Update Analysis</button>
                                 </div>
@@ -97,68 +118,185 @@
                 </div>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-8 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ gross_profit_margin_metrics_html | safe }}
+        {% if model_type == "LSTM" %}
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ gross_profit_margin_metrics_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ gross_profit_margin_metrics_text | safe }}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-4 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ gross_profit_margin_metrics_text | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-8 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ net_profit_margin_metrics_html | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-4 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ net_profit_margin_metrics_text | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
             <div class="row">
-            <div class="col-8 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ operating_profit_margin_metrics_html | safe }}
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ net_profit_margin_metrics_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ net_profit_margin_metrics_text | safe }}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-4 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ operating_profit_margin_metrics_text | safe }}
+
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ operating_profit_margin_metrics_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ operating_profit_margin_metrics_text | safe }}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
+        {% if model_type == "RNN" %}
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rnn_gross_profit_margin_metrics_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rnn_gross_profit_margin_metrics_text | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rnn_net_profit_margin_metrics_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rnn_net_profit_margin_metrics_text | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rnn_operating_profit_margin_metrics_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rnn_operating_profit_margin_metrics_text | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {% if model_type == 'Random Forest' %}
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rf_gross_profit_margin_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rf_operating_profit_margin_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-8 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div id="plotly-graph">
+                                {{ rf_net_profit_margin_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {% if model_type == 'Multiple Linear Regression' %}
+            <div class="row">
+                <div class="col-12">
+                    <h3>Linear Regression Analysis</h3>
+                    <p>Projection based on historical linear trends.</p>
+                </div>
+                <div class="col-md-4">
+                    {{ lr_gross_profit_margin_html | safe }}
+                </div>
+                <div class="col-md-4">
+                    {{ lr_operating_profit_margin_html | safe }}
+                </div>
+                <div class="col-md-4">
+                    {{ lr_net_profit_margin_html | safe }}
+                </div>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}

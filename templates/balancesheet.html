@@ -75,9 +75,13 @@
                                             <input class="form-check-input" type="radio" name="model_type" id="rnn_model" value="RNN" {% if model_type == 'RNN' %}checked{% endif %}>
                                             <label class="form-check-label" for="rnn_model">RNN</label>
                                         </div>
-                                        <div class="form-check">
+                                        <div class="form-check me-3">
                                             <input class="form-check-input" type="radio" name="model_type" id="rf_model" value="Random Forest" {% if model_type == 'Random Forest' %}checked{% endif %}>
                                             <label class="form-check-label" for="rf_model">Random Forest</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="model_type" id="lr_model" value="Multiple Linear Regression" {% if model_type == 'Multiple Linear Regression' %}checked{% endif %}>
+                                            <label class="form-check-label" for="rf_model">Multiple Linear Regression</label>
                                         </div>
                                     </div>
                                 </div>
@@ -257,6 +261,23 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if model_type == "Multiple Linear Regression" %}
+            <div class="row">
+                <div class="col-12">
+                    <h3>Linear Regression Analysis</h3>
+                    <p>Projection based on historical linear trends.</p>
+                </div>
+                <div class="col-md-4">
+                    {{ lr_current_ratio_html | safe }}
+                </div>
+                <div class="col-md-4">
+                    {{ lr_quick_ratio_html | safe }}
+                </div>
+                <div class="col-md-4">
+                    {{ lr_debt_ratio_html | safe }}
+                </div>
+            </div>
         {% endif %}
         {% if model_type == 'Random Forest' %}
         <div class="row">
