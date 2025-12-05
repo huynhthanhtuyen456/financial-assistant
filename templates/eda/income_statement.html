@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Balance Sheet EDA{% endblock %}
+
+{% block footer %}
+    <div class="container-fluid py-4">
+        <!-- Header Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h1 class="card-title mb-0">Income Statement EDA</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Heat Map Section -->
+{#        <div class="row mb-4">#}
+{#            <div class="col-12">#}
+{#                <div class="card shadow-sm">#}
+{#                    <div class="card-body">#}
+{#                        <div id="plotly-graph">#}
+{#                            {{ fig_corr_metrix_html | safe }}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -2,10 +2,7 @@ import logging
 import sys
 # Set up the scheduler
 from contextlib import asynccontextmanager
-from datetime import datetime
 
-from apscheduler.schedulers.background import BackgroundScheduler  # runs tasks in the background
-from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -25,28 +22,14 @@ from routers import (
     balancesheet,
     income_statement,
     cashflow,
-    overall_dashboard
+    overall_dashboard,
+    eda,
 )
-from scripts.refresh_materialized_view import refresh_materialized_view
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG if get_settings().debug_logs else logging.INFO)
 logger = logging.getLogger(__name__)
 
 token_auth_scheme = HTTPBearer()
-
-
-# The task to run
-def refresh_materialized_view_daily_task():
-    logger.info(f"Start refreshing materialized view at {datetime.now()}")
-    refresh_materialized_view()
-    logger.info(f"Finish refreshing materialized view at {datetime.now()}")
-
-
-# Set up the scheduler
-scheduler = BackgroundScheduler()
-trigger = CronTrigger(hour=0)  # <-- CHANGED LINE (run every 00:00 AM UTC, 07:00 AM HO_CHI_MINH/ASIA)
-scheduler.add_job(refresh_materialized_view_daily_task, trigger)
-scheduler.start()
 
 
 @asynccontextmanager
@@ -59,7 +42,6 @@ async def lifespan(app: FastAPI):
     if session_manager.engine is not None:
         # Close the DB connection
         await session_manager.close()
-    scheduler.shutdown()
 
 
 app = FastAPI(
@@ -93,6 +75,7 @@ app.include_router(balancesheet.router)
 app.include_router(income_statement.router)
 app.include_router(cashflow.router)
 app.include_router(overall_dashboard.router)
+app.include_router(eda.router)
 
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
