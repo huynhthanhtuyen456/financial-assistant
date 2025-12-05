@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Balance Sheet EDA{% endblock %}
+{% block title %}Income Statement EDA{% endblock %}
 
 {% block footer %}
     <div class="container-fluid py-4">
@@ -14,23 +14,117 @@
             </div>
         </div>
         <!-- Heat Map Section -->
-{#        <div class="row mb-4">#}
-{#            <div class="col-12">#}
-{#                <div class="card shadow-sm">#}
-{#                    <div class="card-body">#}
-{#                        <div id="plotly-graph">#}
-{#                            {{ fig_corr_metrix_html | safe }}#}
-{#                        </div>#}
-{#                    </div>#}
-{#                </div>#}
-{#            </div>#}
-{#        </div>#}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_corr_metrix_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Revenue Trend Section -->
         <div class="row mb-4 text-center">
             <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div id="plotly-graph">
-                            {{ fig_html | safe }}
+                            {{ fig_revenue_trend_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Gross Profit Trend Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_gp_trend_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Net Profit Trend Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_np_trend_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Gross Profit Margin Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ corr_fig_gpm_metrix_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_gpm_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Net Profit Margin Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ corr_fig_npm_metrix_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_npm_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Operating Profit Margin Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ corr_fig_opm_metrix_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_opm_html | safe }}
                         </div>
                     </div>
                 </div>

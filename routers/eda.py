@@ -21,7 +21,7 @@ router = APIRouter(
 templates = Jinja2Templates(directory="templates")
 
 
-@router.get("/balance-sheet/", response_class=HTMLResponse)
+@router.get("/balance-sheet", response_class=HTMLResponse)
 async def eda_balance_sheet(request: Request, session: AsyncSession = Depends(session_manager.session)):
     """Prepairing Data"""
     df_bs = await get_balance_sheet(session, yearly=True)
@@ -700,7 +700,7 @@ async def eda_balance_sheet(request: Request, session: AsyncSession = Depends(se
     return templates.TemplateResponse("eda/balance_sheet.html", context=context)
 
 
-@router.get("/distribution/", response_class=HTMLResponse)
+@router.get("/distribution", response_class=HTMLResponse)
 async def distribution(request: Request, session: AsyncSession = Depends(session_manager.session)):
     df_is = await get_income_statement(session, year=2021, symbol="FPT", yearly=True)
 
@@ -890,3 +890,618 @@ async def distribution(request: Request, session: AsyncSession = Depends(session
         "fig_distribution_cf_html": fig_distribution_cf_html,
     }
     return templates.TemplateResponse("eda/distribution.html", context=context)
+
+
+@router.get("/income-statement", response_class=HTMLResponse)
+async def eda_income_statement(request: Request, session: AsyncSession = Depends(session_manager.session)):
+    df_is = await get_income_statement(session, yearly=True, symbol="FPT", year=2025)
+    numeric_cols = df_is.select_dtypes(include=[np.number]).columns.tolist()
+    df_is.sort_values(by=['ticker', 'year'], inplace=True)
+    df_is.reset_index(drop=True, inplace=True)
+    df_is[numeric_cols].fillna(0, inplace=True)
+
+    """
+        Correlation Metrix
+        """
+    # Get balance sheet data for correlation analysis
+    # Select multiple features for correlation
+    # correlation_features = ['asset', 'debt', 'equity', 'cash', 'payable']
+
+    # Filter data to include only rows with complete feature data
+    df_is_corr = df_is[numeric_cols].copy()
+
+    # Calculate correlation matrix
+    correlation_matrix = df_is_corr.corr()
+
+    # Calculate statistics for display
+    # Get upper triangle values (excluding diagonal)
+    corr_values = []
+    for i in range(len(correlation_matrix)):
+        for j in range(i + 1, len(correlation_matrix)):
+            corr_value = correlation_matrix.iloc[i, j]
+            if not pd.isna(corr_value):
+                corr_values.append(corr_value)
+
+    mean_corr = np.mean(corr_values) if corr_values else 0
+    median_corr = np.median(corr_values) if corr_values else 0
+    std_corr = np.std(corr_values) if corr_values else 0
+
+    # Create interactive heatmap using Plotly
+    corr_fig = go.Figure()
+    fig = corr_fig.add_trace(go.Heatmap(
+        z=correlation_matrix.values,
+        x=correlation_matrix.columns,
+        y=correlation_matrix.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=correlation_matrix.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 12},
+        colorbar=dict(title="Correlation"),
+        hovertemplate='%{y} vs %{x}<br>Correlation: %{z:.3f}<extra></extra>',
+    ))
+
+    fig.update_layout(
+        title={
+            'text': f'<b>Correlation Matrix - Income Statement Features<br><sub>Mean: '
+                    f'{mean_corr:.3f}, Median: {median_corr:.3f}, Std: {std_corr:.3f}</sub><b>',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Features',
+        yaxis_title='Features',
+        height=600,
+        width=1600,
+        template='plotly_white',
+        xaxis={'side': 'bottom'},
+    )
+
+    fig_corr_metrix_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Correlation Metrix
+    """
+
+    df_is["gross_profit_margin"] = ((df_is["grossProfit"] / df_is["revenue"]) * 100)
+    df_is["gross_profit_margin"] = df_is["gross_profit_margin"].replace([np.inf, -np.inf], 0).fillna(0)
+
+    df_is["operating_profit_margin"] = (df_is["preTaxProfit"] / df_is["revenue"]) * 100
+    df_is["operating_profit_margin"] = df_is["operating_profit_margin"].replace([np.inf, -np.inf], 0).fillna(0)
+
+    df_is["net_profit_margin"] = ((df_is["postTaxProfit"] / df_is["revenue"]) * 100)
+    df_is["net_profit_margin"] = df_is["net_profit_margin"].replace([np.inf, -np.inf], 0).fillna(0)
+
+    """
+    Revenue Trend
+    """
+    # Plot asset history for all companies and overall yearly average
+    fig_revenue = go.Figure()
+
+    # Add traces for each company's asset trend
+    for ticker in df_is['ticker'].unique():
+        df_ticker = df_is[df_is['ticker'] == ticker].sort_values('year')
+        fig_revenue.add_trace(go.Scatter(
+            x=df_ticker['year'],
+            y=df_ticker['revenue'],
+            mode='lines+markers',
+            name=f'{ticker}',
+            line=dict(width=2),
+            marker=dict(size=6),
+            visible='legendonly',
+        ))
+
+    # Add overall yearly average
+    df_revenue_year_avg = df_is.groupby(['year'], as_index=False)['revenue'].mean()
+    fig_revenue.add_trace(go.Scatter(
+        x=df_revenue_year_avg['year'],
+        y=df_revenue_year_avg['revenue'],
+        mode='lines',
+        name='Yearly Average Revenue (All Companies)',
+        line=dict(width=3, dash='dash', color='black'),
+        marker=dict(symbol='circle-open', size=8)
+    ))
+
+    fig_revenue.update_layout(
+        title='Total Revenue Trend - All Companies',
+        xaxis_title='Year',
+        yaxis_title='Revenue',
+        legend=dict(orientation='v'),
+        width=1600,
+        height=600,
+        hovermode='x unified',
+        showlegend=True  # Ensure the legend itself is visible
+    )
+
+    fig_revenue_trend_html = fig_revenue.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Revenue Trend
+    """
+
+    """
+    Gross Profit Trend
+    """
+    # Plot asset history for all companies and overall yearly average
+    fig_gp = go.Figure()
+
+    # Add traces for each company's asset trend
+    for ticker in df_is['ticker'].unique():
+        df_ticker = df_is[df_is['ticker'] == ticker].sort_values('year')
+        fig_gp.add_trace(go.Scatter(
+            x=df_ticker['year'],
+            y=df_ticker['preTaxProfit'],
+            mode='lines+markers',
+            name=f'{ticker}',
+            line=dict(width=2),
+            marker=dict(size=6),
+            visible='legendonly',
+        ))
+
+    # Add overall yearly average
+    df_gp_year_avg = df_is.groupby(['year'], as_index=False)['preTaxProfit'].mean()
+    fig_gp.add_trace(go.Scatter(
+        x=df_gp_year_avg['year'],
+        y=df_gp_year_avg['preTaxProfit'],
+        mode='lines',
+        name='Yearly Average Gross Profit (All Companies)',
+        line=dict(width=3, dash='dash', color='black'),
+        marker=dict(symbol='circle-open', size=8)
+    ))
+
+    fig_gp.update_layout(
+        title='Total Gross Profit Trend - All Companies',
+        xaxis_title='Year',
+        yaxis_title='Gross Profit',
+        legend=dict(orientation='v'),
+        width=1600,
+        height=600,
+        hovermode='x unified',
+        showlegend=True  # Ensure the legend itself is visible
+    )
+
+    fig_gp_trend_html = fig_gp.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Gross Profit Trend
+    """
+
+    """
+    Net Profit Trend
+    """
+    fig_np = go.Figure()
+
+    # Add traces for each company's asset trend
+    for ticker in df_is['ticker'].unique():
+        df_ticker = df_is[df_is['ticker'] == ticker].sort_values('year')
+        fig_np.add_trace(go.Scatter(
+            x=df_ticker['year'],
+            y=df_ticker['postTaxProfit'],
+            mode='lines+markers',
+            name=f'{ticker}',
+            line=dict(width=2),
+            marker=dict(size=6),
+            visible='legendonly',
+        ))
+
+    # Add overall yearly average
+    df_np_year_avg = df_is.groupby(['year'], as_index=False)['postTaxProfit'].mean()
+    fig_np.add_trace(go.Scatter(
+        x=df_np_year_avg['year'],
+        y=df_np_year_avg['postTaxProfit'],
+        mode='lines',
+        name='Yearly Average Net Profit (All Companies)',
+        line=dict(width=3, dash='dash', color='black'),
+        marker=dict(symbol='circle-open', size=8)
+    ))
+
+    fig_np.update_layout(
+        title='Total Net Profit Trend - All Companies',
+        xaxis_title='Year',
+        yaxis_title='Net Profit',
+        legend=dict(orientation='v'),
+        width=1600,
+        height=600,
+        hovermode='x unified',
+        showlegend=True  # Ensure the legend itself is visible
+    )
+
+    fig_np_trend_html = fig_np.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Net Profit Trend
+    """
+
+    """Gross Profit Margin"""
+    # Calculate average currentRatio by symbol (across all years)
+    avg_gpm_by_symbol = df_is.groupby('ticker')['gross_profit_margin'].mean().reset_index()
+    avg_gpm_by_symbol.columns = ['ticker', 'avg_gross_profit_margin']
+    avg_gpm_by_symbol = avg_gpm_by_symbol.sort_values('avg_gross_profit_margin', ascending=False)
+
+    # Get top 50 highest and lowest
+    top_50_highest_gpm = avg_gpm_by_symbol.nlargest(50, 'avg_gross_profit_margin')
+    top_50_lowest_gpm = avg_gpm_by_symbol.nsmallest(50, 'avg_gross_profit_margin')
+
+    top_50_highest_gpm_mean = top_50_highest_gpm['avg_gross_profit_margin'].mean()
+    top_50_highest_gpm_median = top_50_highest_gpm['avg_gross_profit_margin'].median()
+    top_50_highest_gpm_std = top_50_highest_gpm['avg_gross_profit_margin'].std()
+
+    top_50_lowest_gpm_mean = top_50_lowest_gpm['avg_gross_profit_margin'].mean()
+    top_50_lowest_gpm_median = top_50_lowest_gpm['avg_gross_profit_margin'].median()
+    top_50_lowest_gpm_std = top_50_lowest_gpm['avg_gross_profit_margin'].std()
+
+    # Create subplots: 1 row, 2 columns
+    gpm_titles = [
+        f'Top 50 Highest Average Gross Profit Margin - Mean: '
+        f'{top_50_highest_gpm_mean:.3f}, Median: {top_50_highest_gpm_median:.3f}, Std: {top_50_highest_gpm_std:.3f}<b>',
+        f'Top 50 Lowest Average Gross Profit Margin - Mean: '
+        f'{top_50_lowest_gpm_mean:.3f}, Median: {top_50_lowest_gpm_median:.3f}, Std: {top_50_lowest_gpm_std:.3f}<b>',
+    ]
+    fig_gpm = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=gpm_titles,
+        specs=[[{"type": "bar"}, {"type": "bar"}]]
+    )
+
+    # Add top 50 highest chart
+    fig_gpm.add_trace(
+        go.Bar(
+            x=top_50_highest_gpm['avg_gross_profit_margin'],
+            y=top_50_highest_gpm['ticker'],
+            orientation='h',
+            marker=dict(color='green', opacity=0.7),
+            name='Highest',
+            hovertemplate='<b>%{y}</b><br>Avg Gross Profit Margin: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+    # Add top 50 lowest chart
+    fig_gpm.add_trace(
+        go.Bar(
+            x=top_50_lowest_gpm['avg_gross_profit_margin'],
+            y=top_50_lowest_gpm['ticker'],
+            orientation='h',
+            marker=dict(color='red', opacity=0.7),
+            name='Lowest',
+            hovertemplate='<b>%{y}</b><br>Avg Gross Profit Margin: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=2
+    )
+
+    # Update layout
+    fig_gpm.update_layout(
+        title_text="Distribution of Average Gross Profit Margin by Symbol (2000-2024)",
+        height=800,
+        width=1600,
+        showlegend=False,
+        hovermode='closest'
+    )
+
+    fig_gpm.update_xaxes(title_text="Average Gross Profit Margin", row=1, col=1)
+    fig_gpm.update_xaxes(title_text="Average Gross Profit Margin", row=1, col=2)
+    fig_gpm.update_yaxes(title_text="Symbol", row=1, col=1)
+    fig_gpm.update_yaxes(title_text="Symbol", row=1, col=2)
+
+    fig_gpm_html = fig_gpm.to_html(full_html=False, include_plotlyjs='cdn')
+    """End Gross Profit Margin"""
+
+    """Net Profit Margin"""
+    # Calculate average currentRatio by symbol (across all years)
+    avg_npm_by_symbol = df_is.groupby('ticker')['net_profit_margin'].mean().reset_index()
+    avg_npm_by_symbol.columns = ['ticker', 'avg_net_profit_margin']
+    avg_npm_by_symbol = avg_npm_by_symbol.sort_values('avg_net_profit_margin', ascending=False)
+
+    # Get top 50 highest and lowest
+    top_50_highest_npm = avg_npm_by_symbol.nlargest(50, 'avg_net_profit_margin')
+    top_50_lowest_npm = avg_npm_by_symbol.nsmallest(50, 'avg_net_profit_margin')
+
+    top_50_highest_npm_mean = top_50_highest_npm['avg_net_profit_margin'].mean()
+    top_50_highest_npm_median = top_50_highest_npm['avg_net_profit_margin'].median()
+    top_50_highest_npm_std = top_50_highest_npm['avg_net_profit_margin'].std()
+
+    top_50_lowest_npm_mean = top_50_lowest_npm['avg_net_profit_margin'].mean()
+    top_50_lowest_npm_median = top_50_lowest_npm['avg_net_profit_margin'].median()
+    top_50_lowest_npm_std = top_50_lowest_npm['avg_net_profit_margin'].std()
+
+    # Create subplots: 1 row, 2 columns
+    npm_titles = [
+        f'Top 50 Highest Average Net Profit Margin - Mean: '
+        f'{top_50_highest_npm_mean:.3f}, Median: {top_50_highest_npm_median:.3f}, Std: {top_50_highest_npm_std:.3f}<b>',
+        f'Top 50 Lowest Average Net Profit Margin - Mean: '
+        f'{top_50_lowest_npm_mean:.3f}, Median: {top_50_lowest_npm_median:.3f}, Std: {top_50_lowest_npm_std:.3f}<b>',
+    ]
+    fig_npm = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=npm_titles,
+        specs=[[{"type": "bar"}, {"type": "bar"}]]
+    )
+
+    # Add top 50 highest chart
+    fig_npm.add_trace(
+        go.Bar(
+            x=top_50_highest_npm['avg_net_profit_margin'],
+            y=top_50_highest_npm['ticker'],
+            orientation='h',
+            marker=dict(color='green', opacity=0.7),
+            name='Highest',
+            hovertemplate='<b>%{y}</b><br>Avg Net Profit Margin: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+    # Add top 50 lowest chart
+    fig_npm.add_trace(
+        go.Bar(
+            x=top_50_lowest_npm['avg_net_profit_margin'],
+            y=top_50_lowest_npm['ticker'],
+            orientation='h',
+            marker=dict(color='red', opacity=0.7),
+            name='Lowest',
+            hovertemplate='<b>%{y}</b><br>Avg Net Profit Margin: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=2
+    )
+
+    # Update layout
+    fig_npm.update_layout(
+        title_text="Distribution of Average Net Profit Margin by Symbol (2000-2024)",
+        height=800,
+        width=1600,
+        showlegend=False,
+        hovermode='closest'
+    )
+
+    fig_npm.update_xaxes(title_text="Average Net Profit Margin", row=1, col=1)
+    fig_npm.update_xaxes(title_text="Average Net Profit Margin", row=1, col=2)
+    fig_npm.update_yaxes(title_text="Symbol", row=1, col=1)
+    fig_npm.update_yaxes(title_text="Symbol", row=1, col=2)
+
+    fig_npm_html = fig_npm.to_html(full_html=False, include_plotlyjs='cdn')
+    """End Net Profit Margin"""
+
+    """Operating Profit Margin"""
+    # Calculate average currentRatio by symbol (across all years)
+    avg_opm_by_symbol = df_is.groupby('ticker')['operating_profit_margin'].mean().reset_index()
+    avg_opm_by_symbol.columns = ['ticker', 'avg_operating_profit_margin']
+    avg_opm_by_symbol = avg_opm_by_symbol.sort_values('avg_operating_profit_margin', ascending=False)
+
+    # Get top 50 highest and lowest
+    top_50_highest_opm = avg_opm_by_symbol.nlargest(50, 'avg_operating_profit_margin')
+    top_50_lowest_opm = avg_opm_by_symbol.nsmallest(50, 'avg_operating_profit_margin')
+
+    top_50_highest_opm_mean = top_50_highest_opm['avg_operating_profit_margin'].mean()
+    top_50_highest_opm_median = top_50_highest_opm['avg_operating_profit_margin'].median()
+    top_50_highest_opm_std = top_50_highest_opm['avg_operating_profit_margin'].std()
+
+    top_50_lowest_opm_mean = top_50_lowest_opm['avg_operating_profit_margin'].mean()
+    top_50_lowest_opm_median = top_50_lowest_opm['avg_operating_profit_margin'].median()
+    top_50_lowest_opm_std = top_50_lowest_opm['avg_operating_profit_margin'].std()
+
+    # Create subplots: 1 row, 2 columns
+    opm_titles = [
+        f'Top 50 Highest Average Operating Profit Margin - Mean: '
+        f'{top_50_highest_opm_mean:.3f}, Median: {top_50_highest_opm_median:.3f}, Std: {top_50_highest_opm_std:.3f}<b>',
+        f'Top 50 Lowest Average Operating Profit Margin - Mean: '
+        f'{top_50_lowest_opm_mean:.3f}, Median: {top_50_lowest_opm_median:.3f}, Std: {top_50_lowest_opm_std:.3f}<b>',
+    ]
+    fig_opm = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=opm_titles,
+        specs=[[{"type": "bar"}, {"type": "bar"}]]
+    )
+
+    # Add top 50 highest chart
+    fig_opm.add_trace(
+        go.Bar(
+            x=top_50_highest_opm['avg_operating_profit_margin'],
+            y=top_50_highest_opm['ticker'],
+            orientation='h',
+            marker=dict(color='green', opacity=0.7),
+            name='Highest',
+            hovertemplate='<b>%{y}</b><br>Avg Operating Profit Margin: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+    # Add top 50 lowest chart
+    fig_opm.add_trace(
+        go.Bar(
+            x=top_50_lowest_opm['avg_operating_profit_margin'],
+            y=top_50_lowest_opm['ticker'],
+            orientation='h',
+            marker=dict(color='red', opacity=0.7),
+            name='Lowest',
+            hovertemplate='<b>%{y}</b><br>Avg Operating Profit Margin: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=2
+    )
+
+    # Update layout
+    fig_opm.update_layout(
+        title_text="Distribution of Average Operating Profit Margin by Symbol (2000-2024)",
+        height=800,
+        width=1600,
+        showlegend=False,
+        hovermode='closest'
+    )
+
+    fig_opm.update_xaxes(title_text="Average Operating Profit Margin", row=1, col=1)
+    fig_opm.update_xaxes(title_text="Average Operating Profit Margin", row=1, col=2)
+    fig_opm.update_yaxes(title_text="Symbol", row=1, col=1)
+    fig_opm.update_yaxes(title_text="Symbol", row=1, col=2)
+
+    fig_opm_html = fig_opm.to_html(full_html=False, include_plotlyjs='cdn')
+    """End Operating Profit Margin"""
+
+    """
+    Income Statement Indicator Correlation Metrix
+    """
+    gross_profit_margin_features = ["grossProfit", "revenue", "gross_profit_margin"]
+    operating_profit_margin_features = ["preTaxProfit", "revenue", "operating_profit_margin"]
+    net_profit_margin_cols = ["postTaxProfit", "revenue", "net_profit_margin"]
+
+    # GPM
+    # Filter data to include only rows with complete feature data
+    df_corr_gpm = df_is[gross_profit_margin_features].copy()
+
+    # Calculate correlation matrix
+    correlation_matrix_gpm = df_corr_gpm.corr()
+
+    # Calculate statistics for display
+    # Get upper triangle values (excluding diagonal)
+    corr_values_gpm = []
+    for i in range(len(correlation_matrix_gpm)):
+        for j in range(i + 1, len(correlation_matrix_gpm)):
+            corr_value_cr = correlation_matrix_gpm.iloc[i, j]
+            if not pd.isna(corr_value_cr):
+                corr_values_gpm.append(corr_value_cr)
+
+    mean_corr_gpm = np.mean(corr_values_gpm) if corr_values_gpm else 0
+    median_corr_gpm = np.median(corr_values_gpm) if corr_values_gpm else 0
+    std_corr_gpm = np.std(corr_values_gpm) if corr_values_gpm else 0
+
+    # Create interactive heatmap using Plotly
+    corr_fig_gpm = go.Figure()
+    corr_fig_gpm = corr_fig_gpm.add_trace(go.Heatmap(
+        z=correlation_matrix_gpm.values,
+        x=correlation_matrix_gpm.columns,
+        y=correlation_matrix_gpm.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=correlation_matrix_gpm.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 12},
+        colorbar=dict(title="Correlation"),
+        hovertemplate='%{y} vs %{x}<br>Correlation: %{z:.3f}<extra></extra>',
+    ))
+
+    corr_fig_gpm.update_layout(
+        title={
+            'text': f'<b>Correlation Matrix - Gross Profit Margin Indicator Features<br><sub>Mean: '
+                    f'{mean_corr_gpm:.3f}, Median: {median_corr_gpm:.3f}, Std: {std_corr_gpm:.3f}</sub><b>',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Features',
+        yaxis_title='Features',
+        height=600,
+        width=1600,
+        template='plotly_white',
+        xaxis={'side': 'bottom'},
+    )
+
+    corr_fig_gpm_metrix_html = corr_fig_gpm.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # Net Profit Margin
+    df_corr_npm = df_is[net_profit_margin_cols].copy()
+
+    # Calculate correlation matrix
+    correlation_matrix_npm = df_corr_npm.corr()
+
+    # Calculate statistics for display
+    # Get upper triangle values (excluding diagonal)
+    corr_values_npm = []
+    for i in range(len(correlation_matrix_npm)):
+        for j in range(i + 1, len(correlation_matrix_npm)):
+            corr_value_npm = correlation_matrix_npm.iloc[i, j]
+            if not pd.isna(corr_value_npm):
+                corr_values_npm.append(corr_value_npm)
+
+    mean_corr_npm = np.mean(corr_values_npm) if corr_values_npm else 0
+    median_corr_npm = np.median(corr_values_npm) if corr_values_npm else 0
+    std_corr_npm = np.std(corr_values_npm) if corr_values_npm else 0
+
+    # Create interactive heatmap using Plotly
+    corr_fig_npm = go.Figure()
+    corr_fig_npm = corr_fig_npm.add_trace(go.Heatmap(
+        z=correlation_matrix_npm.values,
+        x=correlation_matrix_npm.columns,
+        y=correlation_matrix_npm.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=correlation_matrix_npm.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 12},
+        colorbar=dict(title="Correlation"),
+        hovertemplate='%{y} vs %{x}<br>Correlation: %{z:.3f}<extra></extra>',
+    ))
+
+    corr_fig_npm.update_layout(
+        title={
+            'text': f'<b>Correlation Matrix - Net Profit Margin Indicator Features<br><sub>Mean: '
+                    f'{mean_corr_npm:.3f}, Median: {median_corr_npm:.3f}, Std: {std_corr_npm:.3f}</sub><b>',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Features',
+        yaxis_title='Features',
+        height=600,
+        width=1600,
+        template='plotly_white',
+        xaxis={'side': 'bottom'},
+    )
+
+    corr_fig_npm_metrix_html = corr_fig_npm.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # Net Profit Margin
+    df_corr_opm = df_is[operating_profit_margin_features].copy()
+
+    # Calculate correlation matrix
+    correlation_matrix_opm = df_corr_opm.corr()
+
+    # Calculate statistics for display
+    # Get upper triangle values (excluding diagonal)
+    corr_values_opm = []
+    for i in range(len(correlation_matrix_opm)):
+        for j in range(i + 1, len(correlation_matrix_opm)):
+            corr_value_opm = correlation_matrix_opm.iloc[i, j]
+            if not pd.isna(corr_value_opm):
+                corr_values_opm.append(corr_value_opm)
+
+    mean_corr_opm = np.mean(corr_values_opm) if corr_values_opm else 0
+    median_corr_opm = np.median(corr_values_opm) if corr_values_opm else 0
+    std_corr_opm = np.std(corr_values_opm) if corr_values_opm else 0
+
+    # Create interactive heatmap using Plotly
+    corr_fig_opm = go.Figure()
+    corr_fig_opm.add_trace(go.Heatmap(
+        z=correlation_matrix_opm.values,
+        x=correlation_matrix_opm.columns,
+        y=correlation_matrix_opm.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=correlation_matrix_opm.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 12},
+        colorbar=dict(title="Correlation"),
+        hovertemplate='%{y} vs %{x}<br>Correlation: %{z:.3f}<extra></extra>',
+    ))
+
+    corr_fig_opm.update_layout(
+        title={
+            'text': f'<b>Correlation Matrix - Operating Profit Margin Indicator Features<br><sub>Mean: '
+                    f'{mean_corr_opm:.3f}, Median: {median_corr_opm:.3f}, Std: {std_corr_opm:.3f}</sub><b>',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Features',
+        yaxis_title='Features',
+        height=600,
+        width=1600,
+        template='plotly_white',
+        xaxis={'side': 'bottom'},
+    )
+
+    corr_fig_opm_metrix_html = corr_fig_opm.to_html(full_html=False, include_plotlyjs='cdn')
+    """End Income Statement Indicator"""
+
+    context = {
+        "request": request,
+        "fig_corr_metrix_html": fig_corr_metrix_html,
+        "fig_revenue_trend_html": fig_revenue_trend_html,
+        "fig_gp_trend_html": fig_gp_trend_html,
+        "fig_np_trend_html": fig_np_trend_html,
+        "corr_fig_gpm_metrix_html": corr_fig_gpm_metrix_html,
+        "corr_fig_npm_metrix_html": corr_fig_npm_metrix_html,
+        "corr_fig_opm_metrix_html": corr_fig_opm_metrix_html,
+        "fig_gpm_html": fig_gpm_html,
+        "fig_npm_html": fig_npm_html,
+        "fig_opm_html": fig_opm_html,
+    }
+    return templates.TemplateResponse("eda/income_statement.html", context=context)

@@ -24,6 +24,7 @@ from routers import (
     cashflow,
     overall_dashboard,
     eda,
+    benchmark_testing
 )
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG if get_settings().debug_logs else logging.INFO)
@@ -76,6 +77,7 @@ app.include_router(income_statement.router)
 app.include_router(cashflow.router)
 app.include_router(overall_dashboard.router)
 app.include_router(eda.router)
+app.include_router(benchmark_testing.router)
 
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
