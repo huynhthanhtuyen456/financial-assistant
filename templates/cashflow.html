@@ -1,21 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cash Flow Dashboard</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <!-- Styles -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
-    <!-- Or for RTL support -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" />
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Cash Flow Dashboard{% endblock %}
+
+{% block content %}
     <div class="container-fluid py-4">
         <!-- Header Section -->
-        <div class="row mb-4">
+        <div class="row mb-4 text-center">
             <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -84,6 +73,27 @@
             </div>
         </div>
 
+        <div class="summary-grid">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="metric-label">Free Cash Flow</div>
+                        <div class="metric-value">{{ "{:,.0f}".format(summary.latest_fcf) }}B</div>
+                    </div>
+                    <i class="fas fa-money-check-alt fa-3x text-warning opacity-25"></i>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="metric-label">Free Cash Flow To Equity</div>
+                        <div class="metric-value">{{ "{:,.0f}".format(summary.latest_fcfe) }}B</div>
+                    </div>
+                    <i class="fas fa-money-check-alt fa-3x text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-8 mb-4">
                 <div class="card shadow-sm">
@@ -126,24 +136,4 @@
             </div>
         </div>
     </div>
-
-    <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.full.min.js"></script>
-    <script>
-        $( '#multiple-select-field' ).select2( {
-            theme: "bootstrap-5",
-            width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $( this ).hasClass( 'w-100' ) ? '100%' : 'style',
-            placeholder: $( this ).data( 'placeholder' ),
-            closeOnSelect: false,
-        } );
-        $( '#multiple-select-field-symbol' ).select2( {
-            theme: "bootstrap-5",
-            width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $( this ).hasClass( 'w-100' ) ? '100%' : 'style',
-            placeholder: $( this ).data( 'placeholder' ),
-            closeOnSelect: false,
-        } );
-    </script>
-</body>
-</html>
+{% endblock %}

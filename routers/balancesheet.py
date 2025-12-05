@@ -4,7 +4,9 @@ import plotly.graph_objects as go
 from fastapi import APIRouter, Query, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.helpers import (
@@ -12,7 +14,7 @@ from core.helpers import (
     get_lstm_model,
     get_symbols,
     get_balance_sheet,
-    get_rnn_model,
+    get_rnn_model, train_and_predict_ratio_random_forest,
 )
 from db import session_manager
 
@@ -27,6 +29,7 @@ templates = Jinja2Templates(directory="templates")
 async def balance_sheet(
         request: Request, session: AsyncSession = Depends(session_manager.session),
         symbol: str = Query('FPT', description="Stock symbol"),
+        model_type: str = Query('LSTM', description="Model to use for prediction"),
         prediction_year: int = Query(2023, description="Year to predict"),
         yearly: bool = Query(True, description="Use yearly data"),
         feature_cols_query: list[str] = Query(["asset"], description="Feature columns to query"),
@@ -85,6 +88,14 @@ async def balance_sheet(
 
     # Process each company separately and calculate correlations
     symbols = df_balance_sheet['ticker'].unique()
+    # Calculate summary statistics
+    summary = {}
+
+    # Latest values
+    if len(df_balance_sheet) > 0:
+        summary['latest_asset'] = float(df_balance_sheet['asset'].iloc[-1]) if 'asset' in df_balance_sheet.columns else 0
+        summary['latest_debt'] = float(df_balance_sheet['debt'].iloc[-1]) if 'debt' in df_balance_sheet.columns else 0
+        summary['latest_equity'] = float(df_balance_sheet['equity'].iloc[-1]) if 'equity' in df_balance_sheet.columns else 0
 
     # Calculate correlation matrix for all balance sheet features
     # Filter out non-numeric columns and ensure feature columns exist
@@ -1120,6 +1131,101 @@ async def balance_sheet(
         # Convert plot to HTML
         rnn_debt_ratio_metrics_html = rnn_debt_fig.to_html(full_html=False, include_plotlyjs='cdn')
 
+    """
+    Random Forest
+    """
+    """
+    Random Forest
+    """
+    fig_rf_html = train_and_predict_ratio_random_forest(
+        df_balance_sheet,
+        symbol,
+        target_col="currentRatio",
+        prediction_year=2023,
+        features=current_ratio_prediction,
+    )
+    qr_fig_rf_html = train_and_predict_ratio_random_forest(
+        df_balance_sheet,
+        symbol,
+        target_col="quickRatio",
+        prediction_year=2023,
+        features=quick_ratio_prediction,
+    )
+    debt_ratio_fig_rf_html = train_and_predict_ratio_random_forest(
+        df_balance_sheet,
+        symbol,
+        target_col="debtRatio",
+        prediction_year=2023,
+        features=debt_ratio_prediction,
+    )
+    # # Prepare data: use numeric columns + encoded symbol
+    # df = df_balance_sheet[df_balance_sheet["ticker"] == symbol].copy()
+    # numberic_cols = df_balance_sheet.select_dtypes(include=[np.number]).columns.tolist()
+    # df[numberic_cols].replace([np.inf, -np.inf], 0)
+    # le = LabelEncoder()
+    # df['symbol_enc'] = le.fit_transform(df['ticker'].astype(str))
+    #
+    # # features: all numeric columns except target 'asset', plus encoded symbol
+    # feature_cols = [c for c in numberic_cols if c != 'currentRatio'] + ['symbol_enc']
+    # X = df[feature_cols].astype(float)
+    # y = df['currentRatio'].astype(float)
+    # y.fillna(0, inplace=True)
+    #
+    # # train / test split
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+    #
+    # # train Random Forest
+    # rf = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)
+    # rf.fit(X_train, y_train)
+    #
+    # # feature importances
+    # importances = rf.feature_importances_
+    # feat_imp = sorted(zip(feature_cols, importances), key=lambda x: x[1], reverse=True)
+    # print("Top features (feature, importance):")
+    # for f, imp in feat_imp[:10]:
+    #     print(f, round(imp, 4))
+    #
+    # # Plot trend for selected symbol (use existing symbol_selected if available)
+    # sym_to_plot = symbol if (
+    #             'symbol_selected' in globals() and symbol in df['ticker'].unique()) else (
+    #     symbols[0] if 'symbols' in globals() and len(symbols) > 0 else df['ticker'].iloc[0])
+    # df_sym = df[df['ticker'] == sym_to_plot].sort_values('year').reset_index(drop=True)
+    #
+    # # Prepare inputs for the symbol (use same feature columns)
+    # X_sym = df_sym[feature_cols].astype(float)
+    # pred_sym = rf.predict(X_sym)
+    #
+    # # Predict next year using last available row with year incremented
+    # last = df_sym[df_sym['year'] == 2023].iloc[0]
+    # next_row = last.copy()
+    # next_row['year'] = int(last['year']) + 1
+    # # keep other numeric features unchanged (this is a basic next-year estimate)
+    # next_row['symbol_enc'] = le.transform([sym_to_plot])[0]
+    # X_next = next_row[feature_cols].astype(float).values.reshape(1, -1)
+    # pred_next = float(rf.predict(X_next)[0])
+    #
+    # # Plot with Plotly
+    # fig_rf = go.Figure()
+    # fig_rf.add_trace(go.Scatter(x=df_sym['year'], y=df_sym['currentRatio'],
+    #                             mode='lines+markers', name=f'{sym_to_plot} History',
+    #                             line=dict(width=2), marker=dict(size=6)))
+    # fig_rf.add_trace(go.Scatter(x=df_sym['year'], y=pred_sym,
+    #                             mode='lines+markers', name='Predicted (in-sample)',
+    #                             line=dict(width=2, dash='dot'), marker=dict(size=6, symbol='circle-open')))
+    # fig_rf.add_trace(go.Scatter(x=[next_row['year']], y=[pred_next],
+    #                             mode='markers+text', name=f'Prediction {int(next_row["year"])}',
+    #                             marker=dict(symbol='x', size=12, color='red'),
+    #                             text=[f'{pred_next:,.0f}'], textposition='top center'))
+    # fig_rf.update_layout(title=f'Random Forest: {sym_to_plot} current ratio (historical + predictions)',
+    #                      xaxis_title='Year', yaxis_title='Asset', width=900, height=500)
+    # fig_rf_html = fig_rf.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Random Forest
+    """
+    """
+    End Random Forest
+    """
+
     symbols = await get_symbols(session)
     context = {
         "request": request,
@@ -1136,9 +1242,14 @@ async def balance_sheet(
         "debt_ratio_metrics_text": debt_ratio_annotation_text,
         "rnn_debt_ratio_metrics_html": rnn_debt_ratio_metrics_html,
         "rnn_debt_ratio_annotation_text": rnn_debt_ratio_annotation_text,
+        "fig_rf_html": fig_rf_html,
+        "qr_fig_rf_html": qr_fig_rf_html,
+        "debt_ratio_fig_rf_html": debt_ratio_fig_rf_html,
         "features_2_predict": feature_cols,
+        "summary": summary,
         "symbols": symbols,
         "symbol": symbol,
+        "model_type": model_type,
     }
 
     return templates.TemplateResponse("balancesheet.html", context=context)

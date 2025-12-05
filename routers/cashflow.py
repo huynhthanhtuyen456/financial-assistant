@@ -60,6 +60,16 @@ async def cashflow_dashboard(
     df_cashflow = df_cashflow.sort_values(['ticker', 'year']).reset_index(drop=True)
     df_cashflow = df_cashflow.fillna(value=0)
 
+    # Calculate summary statistics
+    summary = {}
+
+    # Merge balance sheet equity with cashflow for FCFE calculation
+    df_cashflow['fcfe'] = df_cashflow.get('fromSale', pd.Series(0)) - df_cashflow.get('investCost', pd.Series(0)) + df_cashflow['equity']
+
+    if len(df_cashflow) > 0:
+        summary['latest_fcf'] = float(df_cashflow['freeCashFlow'].iloc[-1]) if 'freeCashFlow' in df_cashflow.columns else 0
+        summary['latest_fcfe'] = float(df_cashflow['fcfe'].iloc[-1]) if 'fcfe' in df_cashflow.columns else 0
+
     # Gross Profit Margin
     df_cashflow["fcfe"] = df_cashflow["fromSale"] - df_cashflow["investCost"] + df_cashflow["equity"]
 
@@ -486,6 +496,7 @@ async def cashflow_dashboard(
         "fcfe_metrics_text": fcfe_metrics_text,
         "fcf_metrics_html": fcf_metrics_html,
         "fcf_metrics_text": fcf_metrics_text,
+        "summary": summary,
         "symbols": symbols,
         "symbol": symbol,
     }

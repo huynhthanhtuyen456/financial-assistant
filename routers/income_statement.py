@@ -91,6 +91,12 @@ async def income_statement(
     # Process each company separately and calculate correlations
     symbols = df_income_statement['ticker'].unique()
 
+    summary = {}
+    if len(df_income_statement) > 0:
+        summary['latest_revenue'] = float(df_income_statement['revenue'].iloc[-1]) if 'revenue' in df_income_statement.columns else 0
+        summary['latest_profit'] = float(df_income_statement['postTaxProfit'].iloc[-1]) if 'postTaxProfit' in df_income_statement.columns else 0
+        summary['latest_profit_margin'] = float(df_income_statement['net_profit_margin'].iloc[-1]) if 'net_profit_margin' in df_income_statement.columns else 0
+
     # Calculate correlation matrix for all balance sheet features
     # Filter out non-numeric columns and ensure feature columns exist
     numeric_cols = [col for col in feature_cols]
@@ -754,6 +760,7 @@ async def income_statement(
         "net_profit_margin_metrics_text": net_profit_margin_metrics_text,
         "operating_profit_margin_metrics_html": operating_profit_margin_metrics_html,
         "operating_profit_margin_metrics_text": operating_profit_margin_metrics_text,
+        "summary": summary,
         "symbols": symbols,
         "symbol": symbol,
     }
