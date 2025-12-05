@@ -1,10 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Cash Flow EDA{% endblock %}
 
-</body>
-</html>
+{% block footer %}
+    <div class="container-fluid py-4">
+        <!-- Header Section -->
+        <div class="row mb-4 text-center">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h1 class="card-title mb-0">Cash Flow EDA</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Heat Map Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_corr_metrix_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Free Cash Flow Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_fcf_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Free Cash Flow To Equity Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ corr_fig_fcfe_metrix_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="plotly-graph">
+                            {{ fig_fcfe_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

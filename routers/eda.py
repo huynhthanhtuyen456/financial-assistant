@@ -901,8 +901,8 @@ async def eda_income_statement(request: Request, session: AsyncSession = Depends
     df_is[numeric_cols].fillna(0, inplace=True)
 
     """
-        Correlation Metrix
-        """
+    Correlation Metrix
+    """
     # Get balance sheet data for correlation analysis
     # Select multiple features for correlation
     # correlation_features = ['asset', 'debt', 'equity', 'cash', 'payable']
@@ -1505,3 +1505,292 @@ async def eda_income_statement(request: Request, session: AsyncSession = Depends
         "fig_opm_html": fig_opm_html,
     }
     return templates.TemplateResponse("eda/income_statement.html", context=context)
+
+
+@router.get("/cashflow", response_class=HTMLResponse)
+async def eda_cashflow(request: Request, session: AsyncSession = Depends(session_manager.session)):
+    df_cf = await get_cash_flow(session, yearly=True, year=2025, symbol="FPT")
+    df_bs = await get_balance_sheet(session, yearly=True, year=2025, symbol="FPT")
+    df_cf.fillna(value=0)
+    df_bs.fillna(value=0)
+    numeric_cols = df_cf.select_dtypes(include=[np.number]).columns.tolist()
+
+    """
+    Correlation Metrix
+    """
+    # Filter data to include only rows with complete feature data
+    df_corr = df_cf[numeric_cols].copy()
+
+    # Calculate correlation matrix
+    correlation_matrix = df_corr.corr()
+
+    # Calculate statistics for display
+    # Get upper triangle values (excluding diagonal)
+    corr_values = []
+    for i in range(len(correlation_matrix)):
+        for j in range(i + 1, len(correlation_matrix)):
+            corr_value = correlation_matrix.iloc[i, j]
+            if not pd.isna(corr_value):
+                corr_values.append(corr_value)
+
+    mean_corr = np.mean(corr_values) if corr_values else 0
+    median_corr = np.median(corr_values) if corr_values else 0
+    std_corr = np.std(corr_values) if corr_values else 0
+
+    # Create interactive heatmap using Plotly
+    corr_fig = go.Figure()
+    fig = corr_fig.add_trace(go.Heatmap(
+        z=correlation_matrix.values,
+        x=correlation_matrix.columns,
+        y=correlation_matrix.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=correlation_matrix.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 12},
+        colorbar=dict(title="Correlation"),
+        hovertemplate='%{y} vs %{x}<br>Correlation: %{z:.3f}<extra></extra>',
+    ))
+
+    fig.update_layout(
+        title={
+            'text': f'<b>Correlation Matrix - Cash Flow Features<br><sub>Mean: '
+                    f'{mean_corr:.3f}, Median: {median_corr:.3f}, Std: {std_corr:.3f}</sub><b>',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Features',
+        yaxis_title='Features',
+        height=600,
+        width=1600,
+        template='plotly_white',
+        xaxis={'side': 'bottom'},
+    )
+
+    fig_corr_metrix_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Correlation Metrix
+    """
+
+    """
+    Free Cash Flow
+    """
+    # Calculate average currentRatio by symbol (across all years)
+    avg_fcf_by_symbol = df_cf.groupby('ticker')['freeCashFlow'].mean().reset_index()
+    avg_fcf_by_symbol.columns = ['ticker', 'avg_freeCashFlow']
+    avg_fcf_by_symbol = avg_fcf_by_symbol.sort_values('avg_freeCashFlow', ascending=False)
+
+    # Get top 50 highest and lowest
+    top_50_highest_fcf = avg_fcf_by_symbol.nlargest(50, 'avg_freeCashFlow')
+    top_50_lowest_fcf = avg_fcf_by_symbol.nsmallest(50, 'avg_freeCashFlow')
+
+    top_50_highest_fcf_mean = top_50_highest_fcf['avg_freeCashFlow'].mean()
+    top_50_highest_fcf_median = top_50_highest_fcf['avg_freeCashFlow'].median()
+    top_50_highest_fcf_std = top_50_highest_fcf['avg_freeCashFlow'].std()
+
+    top_50_lowest_fcf_mean = top_50_lowest_fcf['avg_freeCashFlow'].mean()
+    top_50_lowest_fcf_median = top_50_lowest_fcf['avg_freeCashFlow'].median()
+    top_50_lowest_fcf_std = top_50_lowest_fcf['avg_freeCashFlow'].std()
+
+    fcf_titles = [
+        f'Top 50 Highest Average Free Cash Flow - Mean: '
+        f'{top_50_highest_fcf_mean:.3f}, Median: {top_50_highest_fcf_median:.3f}, Std: {top_50_highest_fcf_std:.3f}<b>',
+        f'Top 50 Lowest Average Free Cash Flow - Mean: '
+        f'{top_50_lowest_fcf_mean:.3f}, Median: {top_50_lowest_fcf_median:.3f}, Std: {top_50_lowest_fcf_std:.3f}<b>',
+    ]
+    # Create subplots: 1 row, 2 columns
+    fig_fcf = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=fcf_titles,
+        specs=[[{"type": "bar"}, {"type": "bar"}]]
+    )
+
+    # Add top 50 highest chart
+    fig_fcf.add_trace(
+        go.Bar(
+            x=top_50_highest_fcf['avg_freeCashFlow'],
+            y=top_50_highest_fcf['ticker'],
+            orientation='h',
+            marker=dict(color='green', opacity=0.7),
+            name='Highest',
+            hovertemplate='<b>%{y}</b><br>Avg Free Cash Flow: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+    # Add top 50 lowest chart
+    fig_fcf.add_trace(
+        go.Bar(
+            x=top_50_lowest_fcf['avg_freeCashFlow'],
+            y=top_50_lowest_fcf['ticker'],
+            orientation='h',
+            marker=dict(color='red', opacity=0.7),
+            name='Lowest',
+            hovertemplate='<b>%{y}</b><br>Avg Free Cash Flow: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=2
+    )
+
+    # Update layout
+    fig_fcf.update_layout(
+        title_text="Distribution of Average Free Cash Flow by Symbol (2000-2024)",
+        height=800,
+        width=1600,
+        showlegend=False,
+        hovermode='closest'
+    )
+
+    fig_fcf.update_xaxes(title_text="Average Free Cash Flow", row=1, col=1)
+    fig_fcf.update_xaxes(title_text="Average Free Cash Flow", row=1, col=2)
+    fig_fcf.update_yaxes(title_text="Symbol", row=1, col=1)
+    fig_fcf.update_yaxes(title_text="Symbol", row=1, col=2)
+
+    fig_fcf_html = fig_fcf.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Free Cash Flow
+    """
+
+    """
+    Free Cash Flow To Equity
+    """
+    df_cf["equity"] = df_bs["equity"]
+    df_cf["freeCashFlowToEquity"] = df_cf["fromSale"] - df_cf["investCost"] + df_cf["equity"]
+
+    # Calculate average currentRatio by symbol (across all years)
+    avg_fcfe_by_symbol = df_cf.groupby('ticker')['freeCashFlowToEquity'].mean().reset_index()
+    avg_fcfe_by_symbol.columns = ['ticker', 'avg_freeCashFlowToEquity']
+    avg_fcfe_by_symbol = avg_fcfe_by_symbol.sort_values('avg_freeCashFlowToEquity', ascending=False)
+
+    # Get top 50 highest and lowest
+    top_50_highest_fcfe = avg_fcfe_by_symbol.nlargest(50, 'avg_freeCashFlowToEquity')
+    top_50_lowest_fcfe = avg_fcfe_by_symbol.nsmallest(50, 'avg_freeCashFlowToEquity')
+
+    top_50_highest_fcfe_mean = top_50_highest_fcfe['avg_freeCashFlowToEquity'].mean()
+    top_50_highest_fcfe_median = top_50_highest_fcfe['avg_freeCashFlowToEquity'].median()
+    top_50_highest_fcfe_std = top_50_highest_fcfe['avg_freeCashFlowToEquity'].std()
+
+    top_50_lowest_fcfe_mean = top_50_lowest_fcfe['avg_freeCashFlowToEquity'].mean()
+    top_50_lowest_fcfe_median = top_50_lowest_fcfe['avg_freeCashFlowToEquity'].median()
+    top_50_lowest_fcfe_std = top_50_lowest_fcfe['avg_freeCashFlowToEquity'].std()
+
+    fcfe_titles = [
+        f'Top 50 Highest Average Free Cash Flow To Equity <br>Mean: '
+        f'{top_50_highest_fcfe_mean:.3f}, Median: {top_50_highest_fcfe_median:.3f}, Std: {top_50_highest_fcfe_std:.3f}<b></br>',
+        f'Top 50 Lowest Average Free Cash Flow To Equity <br>Mean: '
+        f'{top_50_lowest_fcfe_mean:.3f}, Median: {top_50_lowest_fcfe_median:.3f}, Std: {top_50_lowest_fcfe_std:.3f}<b></br>',
+    ]
+
+    # Create subplots: 1 row, 2 columns
+    fig_fcfe = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=fcfe_titles,
+        specs=[[{"type": "bar"}, {"type": "bar"}]]
+    )
+
+    # Add top 50 highest chart
+    fig_fcfe.add_trace(
+        go.Bar(
+            x=top_50_highest_fcfe['avg_freeCashFlowToEquity'],
+            y=top_50_highest_fcfe['ticker'],
+            orientation='h',
+            marker=dict(color='green', opacity=0.7),
+            name='Highest',
+            hovertemplate='<b>%{y}</b><br>Avg Free Cash Flow To Equity: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+    # Add top 50 lowest chart
+    fig_fcfe.add_trace(
+        go.Bar(
+            x=top_50_lowest_fcfe['avg_freeCashFlowToEquity'],
+            y=top_50_lowest_fcfe['ticker'],
+            orientation='h',
+            marker=dict(color='red', opacity=0.7),
+            name='Lowest',
+            hovertemplate='<b>%{y}</b><br>Avg Free Cash Flow To Equity: %{x:.2f}<extra></extra>'
+        ),
+        row=1, col=2
+    )
+
+    # Update layout
+    fig_fcfe.update_layout(
+        title_text="Distribution of Average Free Cash Flow To Equity by Symbol (2000-2024)",
+        height=800,
+        width=1400,
+        showlegend=False,
+        hovermode='closest'
+    )
+
+    fig_fcfe.update_xaxes(title_text="Average Free Cash Flow To Equity", row=1, col=1)
+    fig_fcfe.update_xaxes(title_text="Average Free Cash Flow To Equity", row=1, col=2)
+    fig_fcfe.update_yaxes(title_text="Symbol", row=1, col=1)
+    fig_fcfe.update_yaxes(title_text="Symbol", row=1, col=2)
+
+    fig_fcfe_html = fig_fcfe.to_html(full_html=False, include_plotlyjs='cdn')
+    """
+    End Free Cash Flow To Equity
+    """
+
+    """Free Cash Flow To Equity Correlation"""
+    # Free Cash Flow To Equity
+    fcfe_features = ["fromSale", "investCost", "equity", "freeCashFlowToEquity"]
+    df_corr_fcfe = df_cf[fcfe_features].copy()
+
+    # Calculate correlation matrix
+    correlation_matrix_fcfe = df_corr_fcfe.corr()
+
+    # Calculate statistics for display
+    # Get upper triangle values (excluding diagonal)
+    corr_values_fcfe = []
+    for i in range(len(correlation_matrix_fcfe)):
+        for j in range(i + 1, len(correlation_matrix_fcfe)):
+            corr_value_fcfe = correlation_matrix_fcfe.iloc[i, j]
+            if not pd.isna(corr_value_fcfe):
+                corr_values_fcfe.append(corr_value_fcfe)
+
+    mean_corr_fcfe= np.mean(corr_values_fcfe) if corr_values_fcfe else 0
+    median_corr_fcfe = np.median(corr_values_fcfe) if corr_values_fcfe else 0
+    std_corr_fcfe = np.std(corr_values_fcfe) if corr_values_fcfe else 0
+
+    # Create interactive heatmap using Plotly
+    corr_fig_fcfe = go.Figure()
+    corr_fig_fcfe.add_trace(go.Heatmap(
+        z=correlation_matrix_fcfe.values,
+        x=correlation_matrix_fcfe.columns,
+        y=correlation_matrix_fcfe.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=correlation_matrix_fcfe.values,
+        texttemplate='%{text:.2f}',
+        textfont={"size": 12},
+        colorbar=dict(title="Correlation"),
+        hovertemplate='%{y} vs %{x}<br>Correlation: %{z:.3f}<extra></extra>',
+    ))
+
+    corr_fig_fcfe.update_layout(
+        title={
+            'text': f'<b>Correlation Matrix - Free Cash Flow To Equity Indicator Features<br><sub>Mean: '
+                    f'{mean_corr_fcfe:.3f}, Median: {median_corr_fcfe:.3f}, Std: {std_corr_fcfe:.3f}</sub><b>',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Features',
+        yaxis_title='Features',
+        height=600,
+        width=1600,
+        template='plotly_white',
+        xaxis={'side': 'bottom'},
+    )
+
+    corr_fig_fcfe_metrix_html = corr_fig_fcfe.to_html(full_html=False, include_plotlyjs='cdn')
+    """End Free Cash Flow To Equity Correlation"""
+
+    context = {
+        "request": request,
+        "fig_corr_metrix_html": fig_corr_metrix_html,
+        "corr_fig_fcfe_metrix_html": corr_fig_fcfe_metrix_html,
+        "fig_fcf_html": fig_fcf_html,
+        "fig_fcfe_html": fig_fcfe_html,
+    }
+    return templates.TemplateResponse("eda/cashflow.html", context=context)
