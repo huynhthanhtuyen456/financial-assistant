@@ -1134,27 +1134,32 @@ async def balance_sheet(
     """
     Random Forest
     """
-    fig_rf_html = train_and_predict_ratio_random_forest(
-        df_balance_sheet,
-        symbol,
-        target_col="currentRatio",
-        prediction_year=2023,
-        features=current_ratio_prediction,
-    )
-    qr_fig_rf_html = train_and_predict_ratio_random_forest(
-        df_balance_sheet,
-        symbol,
-        target_col="quickRatio",
-        prediction_year=2023,
-        features=quick_ratio_prediction,
-    )
-    debt_ratio_fig_rf_html = train_and_predict_ratio_random_forest(
-        df_balance_sheet,
-        symbol,
-        target_col="debtRatio",
-        prediction_year=2023,
-        features=debt_ratio_prediction,
-    )
+    if prediction_year < 2025:
+        fig_rf_html = train_and_predict_ratio_random_forest(
+            df_balance_sheet,
+            symbol,
+            target_col="currentRatio",
+            prediction_year=prediction_year,
+            features=current_ratio_prediction,
+        )
+        qr_fig_rf_html = train_and_predict_ratio_random_forest(
+            df_balance_sheet,
+            symbol,
+            target_col="quickRatio",
+            prediction_year=prediction_year,
+            features=quick_ratio_prediction,
+        )
+        debt_ratio_fig_rf_html = train_and_predict_ratio_random_forest(
+            df_balance_sheet,
+            symbol,
+            target_col="debtRatio",
+            prediction_year=prediction_year,
+            features=debt_ratio_prediction,
+        )
+    else:
+        fig_rf_html = None
+        qr_fig_rf_html = None
+        debt_ratio_fig_rf_html = None
     # # Prepare data: use numeric columns + encoded symbol
     # df = df_balance_sheet[df_balance_sheet["ticker"] == symbol].copy()
     # numberic_cols = df_balance_sheet.select_dtypes(include=[np.number]).columns.tolist()
@@ -1221,19 +1226,24 @@ async def balance_sheet(
     """
 
     """
-        Linear Regression Predictions
-        """
-    lr_current_ratio_html = train_and_predict_ratio_linear_regression(
-        df_balance_sheet, symbol, "currentRatio", prediction_year, "Current Ratio"
-    )
+    Linear Regression Predictions
+    """
+    if prediction_year < 2025:
+        lr_current_ratio_html = train_and_predict_ratio_linear_regression(
+            df_balance_sheet, symbol, "currentRatio", prediction_year, "Current Ratio"
+        )
 
-    lr_quick_ratio_html = train_and_predict_ratio_linear_regression(
-        df_balance_sheet, symbol, "quickRatio", prediction_year, "Quick Ratio"
-    )
+        lr_quick_ratio_html = train_and_predict_ratio_linear_regression(
+            df_balance_sheet, symbol, "quickRatio", prediction_year, "Quick Ratio"
+        )
 
-    lr_debt_ratio_html = train_and_predict_ratio_linear_regression(
-        df_balance_sheet, symbol, "debtRatio", prediction_year, "Debt Ratio"
-    )
+        lr_debt_ratio_html = train_and_predict_ratio_linear_regression(
+            df_balance_sheet, symbol, "debtRatio", prediction_year, "Debt Ratio"
+        )
+    else:
+        lr_current_ratio_html = None
+        lr_quick_ratio_html = None
+        lr_debt_ratio_html = None
     """
     End Linear Regression
     """

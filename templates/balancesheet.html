@@ -79,7 +79,7 @@
                                             <input class="form-check-input" type="radio" name="model_type" id="rf_model" value="Random Forest" {% if model_type == 'Random Forest' %}checked{% endif %}>
                                             <label class="form-check-label" for="rf_model">Random Forest</label>
                                         </div>
-                                        <div class="form-check">
+                                        <div class="form-check me-3">
                                             <input class="form-check-input" type="radio" name="model_type" id="lr_model" value="Multiple Linear Regression" {% if model_type == 'Multiple Linear Regression' %}checked{% endif %}>
                                             <label class="form-check-label" for="rf_model">Multiple Linear Regression</label>
                                         </div>
@@ -291,15 +291,15 @@
                 </div>
             </div>
 
-            <div class="col-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div id="plotly-graph">
-                            {{ rnn_debt_ratio_annotation_text | safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
+{#            <div class="col-4">#}
+{#                <div class="card shadow-sm">#}
+{#                    <div class="card-body">#}
+{#                        <div id="plotly-graph">#}
+{#                            {{ rnn_debt_ratio_annotation_text | safe }}#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
         </div>
         <div class="row">
             <div class="col-8 mb-4">

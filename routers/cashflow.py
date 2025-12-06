@@ -489,13 +489,17 @@ async def cashflow_dashboard(
     """
     Linear Regression Predictions
     """
-    lr_fcf_html = train_and_predict_ratio_linear_regression(
-        df_cashflow, symbol, "freeCashFlow", prediction_year, "Free Cash Flow"
-    )
+    if prediction_year < 2025:
+        lr_fcf_html = train_and_predict_ratio_linear_regression(
+            df_cashflow, symbol, "freeCashFlow", prediction_year, "Free Cash Flow"
+        )
 
-    lr_fcfe_html = train_and_predict_ratio_linear_regression(
-        df_cashflow, symbol, "fcfe", prediction_year, "Free Cash Flow to Equity"
-    )
+        lr_fcfe_html = train_and_predict_ratio_linear_regression(
+            df_cashflow, symbol, "fcfe", prediction_year, "Free Cash Flow to Equity"
+        )
+    else:
+        lr_fcf_html = None
+        lr_fcfe_html = None
     """
     End Linear Regression
     """
@@ -503,20 +507,24 @@ async def cashflow_dashboard(
     """
     Random Forest
     """
-    fig_fcf_html = train_and_predict_ratio_random_forest(
-        df_cashflow,
-        symbol,
-        target_col="freeCashFlow",
-        prediction_year=2023,
-        features=["freeCashFlow"],
-    )
-    fig_fcfe_html = train_and_predict_ratio_random_forest(
-        df_cashflow,
-        symbol,
-        target_col="fcfe",
-        prediction_year=2023,
-        features=["fcfe", "fromSale", "investCost", "equity"],
-    )
+    if prediction_year < 2025:
+        fig_fcf_html = train_and_predict_ratio_random_forest(
+            df_cashflow,
+            symbol,
+            target_col="freeCashFlow",
+            prediction_year=2023,
+            features=["freeCashFlow"],
+        )
+        fig_fcfe_html = train_and_predict_ratio_random_forest(
+            df_cashflow,
+            symbol,
+            target_col="fcfe",
+            prediction_year=2023,
+            features=["fcfe", "fromSale", "investCost", "equity"],
+        )
+    else:
+        fig_fcf_html = None
+        fig_fcfe_html = None
     """
     End Random Forest
     """

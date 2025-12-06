@@ -1683,29 +1683,39 @@ async def income_statement(
     """
     Linear Regression Predictions
     """
-    lr_gross_profit_margin_html = train_and_predict_ratio_linear_regression(
-        df_income_statement, symbol, "gross_profit_margin", prediction_year, "Gross Profit Margin"
-    )
-    lr_operating_profit_margin_html = train_and_predict_ratio_linear_regression(
-        df_income_statement, symbol, "operating_profit_margin", prediction_year, "Operating Profit Margin"
-    )
-    lr_net_profit_margin_html = train_and_predict_ratio_linear_regression(
-        df_income_statement, symbol, "net_profit_margin", prediction_year, "Net Profit Margin"
-    )
+    if prediction_year < 2025:
+        lr_gross_profit_margin_html = train_and_predict_ratio_linear_regression(
+            df_income_statement, symbol, "gross_profit_margin", prediction_year, "Gross Profit Margin"
+        )
+        lr_operating_profit_margin_html = train_and_predict_ratio_linear_regression(
+            df_income_statement, symbol, "operating_profit_margin", prediction_year, "Operating Profit Margin"
+        )
+        lr_net_profit_margin_html = train_and_predict_ratio_linear_regression(
+            df_income_statement, symbol, "net_profit_margin", prediction_year, "Net Profit Margin"
+        )
+    else:
+        lr_gross_profit_margin_html = None
+        lr_operating_profit_margin_html = None
+        lr_net_profit_margin_html = None
 
     """
     Random Forest Predictions
     """
-    # Using 'revenue' as a feature for margin prediction in RF as it's a key driver
-    rf_gross_profit_margin_html = train_and_predict_ratio_random_forest(
-        df_income_statement, symbol, ["grossProfit", "revenue", "gross_profit_margin"], "gross_profit_margin", prediction_year
-    )
-    rf_operating_profit_margin_html = train_and_predict_ratio_random_forest(
-        df_income_statement, symbol, ["operating_profit_margin", "revenue"], "operating_profit_margin", prediction_year
-    )
-    rf_net_profit_margin_html = train_and_predict_ratio_random_forest(
-        df_income_statement, symbol, ["postTaxProfit", "revenue", "net_profit_margin"], "net_profit_margin", prediction_year
-    )
+    if prediction_year < 2025:
+        # Using 'revenue' as a feature for margin prediction in RF as it's a key driver
+        rf_gross_profit_margin_html = train_and_predict_ratio_random_forest(
+            df_income_statement, symbol, ["grossProfit", "revenue", "gross_profit_margin"], "gross_profit_margin", prediction_year
+        )
+        rf_operating_profit_margin_html = train_and_predict_ratio_random_forest(
+            df_income_statement, symbol, ["operating_profit_margin", "revenue"], "operating_profit_margin", prediction_year
+        )
+        rf_net_profit_margin_html = train_and_predict_ratio_random_forest(
+            df_income_statement, symbol, ["postTaxProfit", "revenue", "net_profit_margin"], "net_profit_margin", prediction_year
+        )
+    else:
+        rf_gross_profit_margin_html = None
+        rf_operating_profit_margin_html = None
+        rf_net_profit_margin_html = None
 
     symbols = await get_symbols(session)
     context = {
