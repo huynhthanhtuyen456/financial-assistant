@@ -1,3 +1,7 @@
+"""
+It is used for storing stock price data in timescale DB; however, I don't have enough time to do this.
+TODO: Apply LSTM to predict stock price in the future.
+"""
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -11,15 +15,6 @@ STOCK_PRICE_TABLE = "stockprice"
 
 
 RESOLUTION_DICT = {
-    # "1": "one_minute_candle",
-    # "3": "three_minutes_candle",
-    # "5": "fifteen_minutes_candle",
-    # "15": "fifteen_minutes_candle",
-    # "30": "thirty_minutes_candle",
-    # "45": "forty_five_minutes_candle",
-    # "1H": "one_hour_candle",
-    # "2H": "two_hours_candle",
-    # "4H": "four_hours_candle",
     "1D": "one_day_candle",
     "1W": "one_week_candle",
     "1M": "one_month_candle",

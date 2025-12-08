@@ -1,5 +1,7 @@
-from datetime import datetime
-
+"""
+API prepared data for training and testing ML/DL models in notebook. In Jupyter notebooks, it cannot access to internal
+docker to fetch data.
+"""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -8,12 +10,9 @@ from sqlmodel import select
 from db import session_manager
 from models.balancesheet import BalanceSheet
 from models.cashflow import Cashflow
-from models.income_statement import IncomeStatement
 from models.financial_ratio import FinancialRatio
+from models.income_statement import IncomeStatement
 from schemas.tc_analysis import (
-    BalanceSheetResponseModel,
-    CashflowResponseModel,
-    IncomeStatementResponseModel,
     FinancialRatioResponseModel
 )
 

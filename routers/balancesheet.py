@@ -1,12 +1,21 @@
+"""
+Balance Sheet Analysis and Prediction Router.
+
+This module defines the API endpoints for the Balance Sheet dashboard.
+It goes beyond simple data retrieval by integrating Machine Learning models
+(LSTM, RNN, Random Forest, Linear Regression) to forecast key financial
+liquidity and leverage ratios (Current Ratio, Quick Ratio, Debt Ratio).
+
+It utilizes Plotly to generate interactive heatmaps for feature correlations
+and line charts for historical vs. predicted trends.
+"""
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from fastapi import APIRouter, Query, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.helpers import (
@@ -32,10 +41,39 @@ async def balance_sheet(
         model_type: str = Query('LSTM', description="Model to use for prediction"),
         prediction_year: int = Query(2023, description="Year to predict"),
         yearly: bool = Query(True, description="Use yearly data"),
-        feature_cols_query: list[str] = Query(["asset"], description="Feature columns to query"),
 ):
     """
-    Generate heatmap chart showing correlation matrix between balance sheet features
+    Generates the comprehensive Balance Sheet Dashboard.
+
+    This endpoint performs a multi-step analysis:
+    1.  **Data Fetching:** Retrieves historical balance sheet data.
+    2.  **Correlation Analysis:** Generates a heatmap showing how different
+        balance sheet items correlate with one another.
+    3.  **Ratio Calculation:** Computes historical Current Ratio, Quick Ratio,
+        and Debt Ratio.
+    4.  **Deep Learning Prediction (LSTM & RNN):**
+        -   Preprocesses data (Normalization, Sequence Creation).
+        -   Loads or trains models for each ratio.
+        -   Predicts future values recursively.
+        -   Generates interactive charts with "Healthy" vs "Warning" zones.
+    5.  **Machine Learning Prediction (Random Forest & Linear Regression):**
+        -   Runs additional baseline models for comparison.
+
+    Args:
+        request (Request): The raw FastAPI request object.
+        session (AsyncSession): Database session.
+        symbol (str): The stock ticker (e.g., 'FPT').
+        model_type (str): Contextual label for the UI.
+        prediction_year (int): The year to forecast up to.
+        yearly (bool): Reporting period flag.
+
+    Returns:
+        TemplateResponse: Rendered HTML with embedded Plotly charts and
+        analysis text.
+
+    Raises:
+        HTTPException: 500 if DB fetch fails, 400 if insufficient data exists
+        for ML training.
     """
     symbol = symbol.upper()
 

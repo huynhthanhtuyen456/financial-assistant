@@ -1,3 +1,7 @@
+"""
+Don't need to use
+TODO: Include technical analysis for understanding price of stocks
+"""
 from json import JSONDecodeError
 
 import requests

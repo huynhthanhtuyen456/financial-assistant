@@ -1,17 +1,22 @@
-import numpy as np
+"""
+Financial Dashboard Route Definition.
+
+This module defines the API endpoints for the comprehensive financial dashboard.
+It acts as the controller that aggregates data from multiple financial statements
+(Balance Sheet, Cash Flow, Income Statement), performs financial analysis,
+calculates health scores, generates interactive Plotly visualizations, and
+renders the final HTML view.
+"""
 import pandas as pd
 import plotly.graph_objects as go
 from fastapi import APIRouter, Query, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.helpers import get_symbols, get_balance_sheet, get_cash_flow, get_income_statement
 from db import session_manager
-from models.balancesheet import BalanceSheet
-from models.cashflow import Cashflow
-from models.income_statement import IncomeStatement
 from models.financial_ratio import FinancialRatio
 
 router = APIRouter(
@@ -30,7 +35,37 @@ async def overall_dashboard(
     yearly: bool = Query(True, description="Use yearly data"),
 ):
     """
-    Overall dashboard combining Balance Sheet, Cash Flow, and Income Statement analysis
+    Renders the overall financial dashboard for a specific stock.
+
+    This endpoint performs the following steps:
+    1.  **Data Fetching:** Retrieves Balance Sheet, Cash Flow, Income Statement,
+        and Financial Ratio data from the database.
+    2.  **Data Processing:** Cleanses data (fills NaNs), sorts by year, and
+        merges datasets into a unified DataFrame.
+    3.  **Metric Calculation:** Computes derived metrics such as FCFE (Free
+        Cash Flow to Equity) and various profit margins.
+    4.  **Health Scoring:** Applies a rule-based algorithm to score the company
+        across four dimensions:
+        -   Profitability (35% weight)
+        -   Liquidity (25% weight)
+        -   Solvency (25% weight)
+        -   Growth (15% weight)
+    5.  **Visualization:** Generates interactive Plotly charts for trends and
+        structures.
+
+    Args:
+        request (Request): The raw FastAPI request object.
+        session (AsyncSession): Database session dependency.
+        symbol (str): The stock symbol (e.g., 'FPT').
+        prediction_year (int): The reference year for the dashboard focus.
+        yearly (bool): Whether to fetch Annual (True) or Quarterly (False) reports.
+
+    Returns:
+        TemplateResponse: Rendered HTML page with context containing financial
+        data, calculated scores, and embedded Plotly chart HTML.
+
+    Raises:
+        HTTPException: Returns 500 if data fetching fails.
     """
     symbol = symbol.upper()
     

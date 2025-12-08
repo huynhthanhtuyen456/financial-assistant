@@ -1,54 +1,40 @@
+"""
+Stock Model Definition.
+
+This module defines the database model for storing general information about
+stock entities (companies). It handles localized naming (English/Vietnamese),
+listing status, and unique ticker symbols.
+"""
 from datetime import date
-from typing import Optional
 
 from sqlalchemy import Column, BigInteger
-from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship
+from sqlmodel import Field
 
 from core import models
 
 
-# class Industry(models.TimestampModel, table=True):
-#     id: int = Field(primary_key=True)
-#     name: str = Field(index=True, nullable=False)
-#     child: int = Field(nullable=True, foreign_key="industry.id")
-#     parent: Optional["Industry"] = Relationship(back_populates="children")
-#     children: Mapped[list["Industry"]] = Relationship(
-#         back_populates="parent", sa_relationship_kwargs={
-#             "lazy": "joined", "join_depth": 2, "remote_side": "industry.id"
-#         }
-#     )
-#     stocks: list["Stock"] = Relationship(back_populates="industry")
-#
-#
-# class Sector(models.TimestampModel, table=True):
-#     id: int = Field(primary_key=True)
-#     name: str = Field(index=True, nullable=False)
-#     industry_id: int = Field(foreign_key=f"{Industry.__tablename__}.id", nullable=False)
-#     stocks: list["Stock"] = Relationship(back_populates="sector")
-#
-#
-# class StockFloor(models.TimestampModel, table=True):
-#     """The Floor includes HOSE, UPCOM, HNX where stock listed"""
-#     id: int = Field(primary_key=True)
-#     name: str = Field(index=True, nullable=False)
-#     stocks: list["Stock"] = Relationship(back_populates="floor")
-#
-#
-# class StockType(models.TimestampModel, table=True):
-#     """Categorize the stock includes STOCK, ETF."""
-#     id: int = Field(primary_key=True)
-#     name: str = Field(index=True, nullable=False)
-#     stocks: list["Stock"] = Relationship(back_populates="type")
-#
-#
-# class StockGroup(models.TimestampModel, table=True):
-#     id: int = Field(primary_key=True)
-#     name: str = Field(index=True, nullable=False)
-#     stocks: list["Stock"] = Relationship(back_populates="group")
-
-
 class Stock(models.TimestampModel, table=True):
+    """
+    Represents a specific Stock or Company entity in the database.
+
+    This model stores static reference data about a company, including its
+    names in different languages, its ticker symbol, and its listing details.
+    It inherits from `models.TimestampModel` to track when the record was
+    created or updated.
+
+    Attributes:
+        id (int): The primary key identifier. Uses BigInteger to ensure
+            scalability.
+        name (str): The common name of the stock/company.
+        eng_name (str): The official name of the company in English.
+        vie_name (str): The official name of the company in Vietnamese.
+        symbol (str): The unique stock ticker symbol (e.g., 'VNM', 'VIC').
+            Must be unique across the database.
+        is_listed (bool): A flag indicating if the stock is currently active
+            and listed on the exchange.
+        listed_date (date): The date the stock was officially listed on the
+            exchange.
+    """
     id: int = Field(sa_column=Column(BigInteger, primary_key=True))
     name: str = Field(index=True, nullable=False)
     eng_name: str = Field(index=True, nullable=False)
@@ -56,22 +42,3 @@ class Stock(models.TimestampModel, table=True):
     symbol: str = Field(index=True, nullable=False, unique=True, max_length=30)
     is_listed: bool = Field(nullable=False)
     listed_date: date = Field(nullable=False)
-
-    # logo: str = Field(nullable=False)
-    # is_listed: bool = Field(nullable=False)
-    # listed_date: date = Field(index=True, nullable=False)
-    #
-    # industry_id: int = Field(foreign_key=f"{Industry.__tablename__}.id", nullable=False)
-    # industry: Industry | None = Relationship(back_populates="stocks")
-    #
-    # floor_id: int = Field(foreign_key=f"{StockFloor.__tablename__}.id", nullable=False)
-    # floor: StockFloor | None = Relationship(back_populates="stocks")
-    #
-    # type_id: int = Field(foreign_key=f"{StockType.__tablename__}.id", nullable=False)
-    # type: StockType | None = Relationship(back_populates="stocks")
-    #
-    # group_id: int = Field(foreign_key=f"{StockGroup.__tablename__}.id", nullable=False)
-    # group: StockGroup | None = Relationship(back_populates="stocks")
-    #
-    # sector_id: int = Field(foreign_key=f"{Sector.__tablename__}.id", nullable=False)
-    # sector: Sector | None = Relationship(back_populates="stocks")

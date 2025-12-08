@@ -1,3 +1,11 @@
+"""
+Cash Flow Analysis and Prediction Router.
+
+This module defines the API endpoints for the Cash Flow dashboard.
+It focuses on analyzing a company's ability to generate cash, specifically
+forecasting 'Free Cash Flow' (FCF) and 'Free Cash Flow to Equity' (FCFE)
+using various Machine Learning models (LSTM, RNN, Random Forest, Linear Regression).
+"""
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -36,7 +44,32 @@ async def cashflow_dashboard(
         yearly: bool = Query(True, description="Use yearly data"),
 ):
     """
-    Generate heatmap chart showing correlation matrix between balance sheet features
+    Generates the comprehensive Cash Flow Dashboard.
+
+    This endpoint performs the following analytical steps:
+    1.  **Data Ingestion:** Fetches Cash Flow and Balance Sheet data.
+    2.  **Correlation Analysis:** Generates a heatmap of cash flow components.
+    3.  **Metric Calculation:** Computes FCF and FCFE (Free Cash Flow to Equity).
+    4.  **Deep Learning Prediction (LSTM & RNN):**
+        -   Trains/Loads models to predict FCFE components.
+        -   Recursively forecasts future values.
+        -   Generates dynamic health assessment text based on predictions.
+    5.  **Baseline Modeling:** Runs Linear Regression and Random Forest for comparison
+        (if within specific year bounds).
+
+    Args:
+        request (Request): The raw FastAPI request object.
+        session (AsyncSession): Database session dependency.
+        symbol (str): The stock ticker (e.g., 'FPT').
+        prediction_year (int): The future year to predict up to.
+        model_type (str): Label for the model being displayed.
+        yearly (bool): Reporting period filter.
+
+    Returns:
+        TemplateResponse: Rendered HTML with Plotly charts and financial insights.
+
+    Raises:
+        HTTPException: 500 on DB error, 400 on insufficient data.
     """
     symbol = symbol.upper()
     look_back = 3

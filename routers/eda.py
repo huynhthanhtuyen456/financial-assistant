@@ -1,3 +1,14 @@
+"""
+Exploratory Data Analysis (EDA) Router.
+
+This module provides API endpoints that generate comprehensive dashboards for
+analyzing historical financial data across the entire market (or large subsets).
+It utilizes Plotly to create statistical visualizations including:
+- Correlation Heatmaps
+- Box and Violin Plots for distribution analysis
+- Trend lines for key metrics (Assets, Revenue, etc.)
+- Ranked Bar Charts (Top/Bottom 50) for financial ratios.
+"""
 import math
 import plotly.graph_objects as go
 
@@ -23,7 +34,19 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/balance-sheet", response_class=HTMLResponse)
 async def eda_balance_sheet(request: Request, session: AsyncSession = Depends(session_manager.session)):
-    """Prepairing Data"""
+    """
+    Generates the Balance Sheet EDA Dashboard.
+
+    This endpoint aggregates balance sheet data to perform market-wide analysis.
+    It calculates liquidity ratios (Current, Quick) and solvency ratios (Debt-to-Equity),
+    then visualizes their distributions and correlations.
+
+    Visualizations included:
+    1.  Feature Correlation Heatmap.
+    2.  Distribution Plots (Box & Violin) for numeric features.
+    3.  Historical Trend Lines (Assets, Debt, Equity).
+    4.  Top/Bottom 50 Rankings for Current Ratio, Quick Ratio, and Debt-to-Equity.
+    """
     df_bs = await get_balance_sheet(session, yearly=True)
     numeric_cols = df_bs.select_dtypes(include=[np.number]).columns.tolist()
     df_bs.sort_values(by=['ticker', 'year'], inplace=True)
