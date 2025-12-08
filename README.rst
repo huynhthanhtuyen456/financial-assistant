@@ -1,8 +1,8 @@
 ===================================
-FinSC - Financial Assistant AI API
+FinAI - Financial Assistant AI API
 ===================================
 
-**FinSC** (Financial Assistant AI API Trading) is a comprehensive backend system designed to facilitate financial data analysis and algorithmic trading. This project leverages a robust stack including TimescaleDB, PostgreSQL, and MongoDB to manage financial datasets and serve API requests.
+**FinAI** (Financial Assistant AI API Trading) is a comprehensive backend system designed to facilitate financial data analysis and algorithmic trading. This project leverages a robust stack including TimescaleDB, PostgreSQL, and MongoDB to manage financial datasets and serve API requests.
 
 .. contents:: Table of Contents
    :depth: 2
@@ -10,7 +10,7 @@ FinSC - Financial Assistant AI API
 Description
 ===========
 
-FinSC serves as the core engine for the "Financial Assistant AI API Trading" platform. It is built to handle the ingestion, storage, and processing of stock market data, specifically targeting the Vietnam exchange stock market.
+FinAI serves as the core engine for the "Financial Assistant AI API Trading" platform. It is built to handle the ingestion, storage, and processing of stock market data, specifically targeting the Vietnam exchange stock market.
 
 * **Version:** 0.1
 * **Stack Name:** financial-assistant-api
@@ -18,10 +18,13 @@ FinSC serves as the core engine for the "Financial Assistant AI API Trading" pla
 Prerequisites
 =============
 
-Before you begin, ensure you have the following installed on your machine:
+Before you begin, ensure your environment is set up correctly:
 
-* `Docker <https://docs.docker.com/get-docker/>`_
-* `Docker Compose <https://docs.docker.com/compose/install/>`_
+1. **Virtualization Technology:** Ensure that hardware virtualization is enabled in your system's BIOS/UEFI settings. Docker relies on this to run containers (e.g., Hyper-V or WSL2 on Windows, HyperKit on macOS).
+2. **Software:** Install the following:
+
+   * `Docker <https://docs.docker.com/get-docker/>`_
+   * `Docker Compose <https://docs.docker.com/compose/install/>`_
 
 Installation
 ============
@@ -62,18 +65,17 @@ Copy and paste the following configuration into your ``.env`` file:
     MONGO_DB_PASSWORD=mongo
 
     # Application Settings
-    PROJECT_NAME=FinSC
+    PROJECT_NAME=FinAI
     DEBUG_LOGS=true
     ECHO_SQL=true
     VERSION=0.1
     DESCRIPTION='Financial Assistant AI API Trading'
     STACK_NAME=financial-assistant-api
-    DATAFEED_BUCKET_NAME=finsc-datafeed
 
 2. Setup and Run Docker Containers
 ----------------------------------
 
-Build and start the application containers in detached mode using Docker Compose. This will initialize the backend service along with the required databases (TimescaleDB, PostgreSQL, and MongoDB).
+Build and start the application containers in detached mode using Docker Compose. This will initialize the backend service along with the required databases.
 
 .. code-block:: bash
 
@@ -111,10 +113,37 @@ Download historical and current financial data using the TCBS API. This script r
 
     docker compose run -it --rm backend python scripts/download_scfa_data.py
 
+Accessing Services
+==================
+
+Once the Docker containers are running, you can access the following interfaces:
+
+**Application Dashboard**
+    * **URL:** http://localhost/dashboard
+
+**Database Management Tool**
+    * **URL:** http://localhost:8080/
+    * Use the following credentials to connect to the TimescaleDB instance:
+
+    .. list-table::
+       :widths: 30 70
+       :header-rows: 0
+
+       * - **System**
+         - PostgreSQL / TimescaleDB
+       * - **Server**
+         - ``timescale``
+       * - **Username**
+         - ``fai``
+       * - **Password**
+         - ``changeme``
+       * - **Database**
+         - ``fai``
+
 Troubleshooting
 ===============
 
-If you encounter issues connecting to the databases, ensure that:
+If you encounter issues connecting to the databases or services:
 
-* Ports ``5432`` (Postgres/Timescale) and ``27017`` (Mongo) are not being used by other services on your host machine.
-* The ``.env`` file is correctly placed in the root directory.
+* Ensure Virtualization is enabled in your BIOS/OS settings.
+* Check that ports ``80`` (Dashboard), ``8080`` (DB Admin), ``5432``, and ``27017`` are not blocked or in use by other local applications.
