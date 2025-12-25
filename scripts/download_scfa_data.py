@@ -16,6 +16,9 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG if get_settings().deb
 logger = logging.getLogger(__name__)
 
 
+TCBS_BASE_URL = "https://apiextaws.tcbs.com.vn/tcanalysis/v1/finance"
+
+
 def download_balancesheet_from_tcbs():
     stocks = text("select symbol from stock where symbol is not null and is_listed = true")
     results = session.exec(stocks)
@@ -24,8 +27,7 @@ def download_balancesheet_from_tcbs():
         symbol = stock._mapping["symbol"]
         logger.info(f"Start downloading Balance Sheet with Stock yearly: {symbol}")
         # Download TCA data from TCBS yearly
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/balancesheet?yearly=1&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/balancesheet?yearly=1&isAll=true")
         response = requests.get(download_url)
         logger.debug(f"Download URL: {download_url}")
         try:
@@ -62,8 +64,7 @@ def download_balancesheet_from_tcbs():
 
         # Download TCA data from TCBS quarterly
         logger.info(f"Start downloading Balance Sheet with Stock quarterly: {symbol}")
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/balancesheet?yearly=0&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/balancesheet?yearly=0&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Balance Sheet Symbol {stock} {json_resp=}")
@@ -103,8 +104,7 @@ def download_cashflow_from_tcbs():
         symbol = stock._mapping["symbol"]
         logger.info(f"Start downloading Cashflow with Stock yearly: {symbol}")
         # Download TCA data from TCBS yearly
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/cashflow?yearly=1&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/cashflow?yearly=1&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Cashflow Symbol {stock} {json_resp=}")
@@ -137,8 +137,7 @@ def download_cashflow_from_tcbs():
 
         # Download TCA data from TCBS quarterly
         logger.info(f"Start downloading Cashflow with Stock quarterly: {symbol}")
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/cashflow?yearly=0&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/cashflow?yearly=0&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Cashflow Symbol {stock} {json_resp=}")
@@ -178,8 +177,7 @@ def download_incomestatement_from_tcbs():
         symbol = stock._mapping["symbol"]
         logger.info(f"Start downloading income statement with Stock yearly: {symbol}")
         # Download TCA data from TCBS yearly
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/incomestatement?yearly=1&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/incomestatement?yearly=1&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Income statement Symbol {stock} {json_resp=}")
@@ -212,8 +210,7 @@ def download_incomestatement_from_tcbs():
 
         # Download TCA data from TCBS quarterly
         logger.info(f"Start downloading income statement with Stock quarterly: {symbol}")
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/incomestatement?yearly=0&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/incomestatement?yearly=0&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Income statement Symbol {stock} {json_resp=}")
@@ -253,8 +250,7 @@ def download_financial_ratio_from_tcbs():
         symbol = stock._mapping["symbol"]
         logger.info(f"Start downloading financial ratio with Stock yearly: {symbol}")
         # Download TCA data from TCBS yearly
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/financialratio?yearly=1&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/financialratio?yearly=1&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Financial Ratio Symbol {stock} {json_resp=}")
@@ -287,8 +283,7 @@ def download_financial_ratio_from_tcbs():
 
         # Download TCA data from TCBS quarterly
         logger.info(f"Start downloading income statement with Stock quarterly: {symbol}")
-        download_url = (f"https://apipubaws.tcbs.com.vn/tcanalysis/v1/finance/"
-                        f"{symbol}/financialratio?yearly=0&isAll=true")
+        download_url = (f"{TCBS_BASE_URL}/{symbol}/financialratio?yearly=0&isAll=true")
         response = requests.get(download_url)
         json_resp = response.json()
         logger.debug(f"Financial Ratio Symbol {stock} {json_resp=}")
